@@ -4,6 +4,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const nz = (n: number, min = 0, max = 9999) => z.number().min(min).max(max);
 
+function dbError(error: unknown, msg = "Database operation failed"): never {
+  console.error("[db]", error);
+  throw new Error(msg);
+}
+
+async function assertTrainer(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .in("role", ["trainer", "admin"])
+    .maybeSingle();
+  if (!data) throw new Error("Forbidden: trainer role required");
+}
+
+
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
