@@ -2,6 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dumbbell, LineChart, Users, ListChecks, User2, LogOut, Ruler, Shield, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/app.functions";
@@ -87,8 +88,22 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-1 pt-4 border-t border-border">
-          <div className="px-3 py-2 text-xs text-muted-foreground">
-            {meLoading ? "Laddar konto…" : `${me?.profile?.display_name ?? "Konto"} · ${roleLabel}`}
+          <div className="px-3 py-2 flex flex-col gap-1">
+            <div className="text-xs font-medium text-foreground">{meLoading ? "Laddar konto…" : me?.profile?.display_name ?? "Konto"}</div>
+            {!meLoading && (
+              <Badge
+                variant="outline"
+                className={
+                  me?.isAdmin
+                    ? "border-violet-500 text-violet-400 bg-violet-500/10 text-xs w-fit"
+                    : me?.isTrainer
+                    ? "border-blue-500 text-blue-400 bg-blue-500/10 text-xs w-fit"
+                    : "border-emerald-500 text-emerald-400 bg-emerald-500/10 text-xs w-fit"
+                }
+              >
+                {me?.isAdmin ? "🛡️ Admin" : me?.isTrainer ? "🏃 Tränare" : "💪 Klient"}
+              </Badge>
+            )}
           </div>
           <button
             onClick={onRefreshRoles}
@@ -121,6 +136,20 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             </button>
             <User2 className="size-4" />
             {meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}
+            {!meLoading && (
+              <Badge
+                variant="outline"
+                className={
+                  me?.isAdmin
+                    ? "border-violet-500 text-violet-400 bg-violet-500/10 text-xs"
+                    : me?.isTrainer
+                    ? "border-blue-500 text-blue-400 bg-blue-500/10 text-xs"
+                    : "border-emerald-500 text-emerald-400 bg-emerald-500/10 text-xs"
+                }
+              >
+                {me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Klient"}
+              </Badge>
+            )}
           </div>
         </header>
         <main className="p-4 md:p-8 max-w-5xl w-full mx-auto flex-1">{children}</main>
