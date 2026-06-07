@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "trainer releases own client" ON public.profiles;

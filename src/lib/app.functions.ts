@@ -4,6 +4,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const nz = (n: number, min = 0, max = 9999) => z.number().min(min).max(max);
 
+function dbError(error: unknown, msg = "Database operation failed"): never {
+  console.error("[db]", error);
+  throw new Error(msg);
+}
+
+async function assertTrainer(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .in("role", ["trainer", "admin"])
+    .maybeSingle();
+  if (!data) throw new Error("Forbidden: trainer role required");
+}
+
+
 export const getMe = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -73,7 +89,7 @@ export const setUserRole = createServerFn({ method: "POST" })
         const { error } = await supabase
           .from("user_roles")
           .insert({ user_id: data.userId, role: data.role });
-        if (error) throw error;
+        if (error) dbError(error);
       }
     } else {
       const { error } = await supabase
@@ -81,7 +97,7 @@ export const setUserRole = createServerFn({ method: "POST" })
         .delete()
         .eq("user_id", data.userId)
         .eq("role", data.role);
-      if (error) throw error;
+      if (error) dbError(error);
     }
     return { ok: true };
   });
@@ -101,7 +117,7 @@ export const assignClientToTrainer = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ trainer_id: data.trainerId })
       .eq("id", data.clientId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -115,7 +131,7 @@ export const listClients = createServerFn({ method: "GET" })
       .select("id, display_name, trainer_id, created_at")
       .or(`trainer_id.eq.${userId},trainer_id.is.null`)
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (error) dbError(error);
     const clients = (profiles ?? []).filter((p) => p.id !== userId);
     const ids = clients.map((c) => c.id);
     if (ids.length === 0) {
@@ -160,7 +176,7 @@ export const claimClient = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ trainer_id: userId })
       .eq("id", data.clientId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -174,7 +190,7 @@ export const releaseClient = createServerFn({ method: "POST" })
       .update({ trainer_id: null })
       .eq("id", data.clientId)
       .eq("trainer_id", userId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -193,7 +209,7 @@ export const listInvites = createServerFn({ method: "GET" })
       .select("*")
       .eq("trainer_id", userId)
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (error) dbError(error);
     return data ?? [];
   });
 
@@ -207,7 +223,9 @@ export const createClientInvite = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await assertTrainer(supabase, userId);
     const token = randomToken();
+
     const { data: row, error } = await supabase
       .from("client_invites")
       .insert({
@@ -218,7 +236,7 @@ export const createClientInvite = createServerFn({ method: "POST" })
       })
       .select()
       .single();
-    if (error) throw error;
+    if (error) dbError(error);
     return row;
   });
 
@@ -232,7 +250,7 @@ export const revokeInvite = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("trainer_id", userId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -282,7 +300,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .from("profiles")
       .update({ trainer_id: invite.trainer_id })
       .eq("id", userId);
-    if (upErr) throw upErr;
+    if (upErr) dbError(upErr);
     await supabaseAdmin
       .from("client_invites")
       .update({ accepted_at: new Date().toISOString(), accepted_by: userId })
@@ -299,7 +317,7 @@ export const listExercises = createServerFn({ method: "GET" })
       .select("id,name,primary_muscle,equipment,level")
       .order("name")
       .limit(2000);
-    if (error) throw error;
+    if (error) dbError(error);
     return data ?? [];
   });
 
@@ -314,7 +332,7 @@ export const createExercise = createServerFn({ method: "POST" })
       .insert({ name: data.name, notes: data.notes ?? "", trainer_id: userId })
       .select()
       .single();
-    if (error) throw error;
+    if (error) dbError(error);
     return row;
   });
 
@@ -326,7 +344,7 @@ export const listPrograms = createServerFn({ method: "GET" })
       .from("programs")
       .select("*")
       .order("created_at", { ascending: false });
-    if (error) throw error;
+    if (error) dbError(error);
     return data ?? [];
   });
 
@@ -357,7 +375,7 @@ export const createProgram = createServerFn({ method: "POST" })
       .insert({ name: data.name, description: data.description ?? "", trainer_id: userId })
       .select()
       .single();
-    if (error) throw error;
+    if (error) dbError(error);
     return row;
   });
 
@@ -398,7 +416,7 @@ export const addProgramExercise = createServerFn({ method: "POST" })
           .insert({ name: ge.name, notes: "", trainer_id: userId })
           .select("id")
           .single();
-        if (cErr) throw cErr;
+        if (cErr) dbError(cErr);
         exerciseUuid = created.id;
       }
     }
@@ -418,7 +436,7 @@ export const addProgramExercise = createServerFn({ method: "POST" })
       rest_seconds: data.rest_seconds,
       note: data.note ?? "",
     });
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -428,7 +446,7 @@ export const removeProgramExercise = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string().uuid() }))
   .handler(async ({ context, data }) => {
     const { error } = await context.supabase.from("program_exercises").delete().eq("id", data.id);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -439,7 +457,7 @@ export const assignProgram = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("program_assignments")
       .upsert({ program_id: data.programId, client_id: data.clientId });
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -452,7 +470,7 @@ export const unassignProgram = createServerFn({ method: "POST" })
       .delete()
       .eq("program_id", data.programId)
       .eq("client_id", data.clientId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -478,7 +496,7 @@ export const startSession = createServerFn({ method: "POST" })
       .insert({ client_id: userId, program_id: data.programId })
       .select()
       .single();
-    if (error) throw error;
+    if (error) dbError(error);
     return row;
   });
 
@@ -527,7 +545,7 @@ export const logSet = createServerFn({ method: "POST" })
       reps: data.reps,
       rpe: data.rpe ?? null,
     });
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -539,7 +557,7 @@ export const completeSession = createServerFn({ method: "POST" })
       .from("workout_sessions")
       .update({ completed_at: new Date().toISOString(), notes: data.notes ?? "" })
       .eq("id", data.sessionId);
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
 
@@ -554,7 +572,7 @@ export const listSessions = createServerFn({ method: "GET" })
       .select("*, programs(name)")
       .eq("client_id", cid)
       .order("started_at", { ascending: false });
-    if (error) throw error;
+    if (error) dbError(error);
     return rows ?? [];
   });
 
@@ -613,7 +631,7 @@ export const listMeasurements = createServerFn({ method: "GET" })
       .select("*")
       .eq("client_id", cid)
       .order("measured_at", { ascending: true });
-    if (error) throw error;
+    if (error) dbError(error);
     return rows ?? [];
   });
 
@@ -638,6 +656,6 @@ export const addMeasurement = createServerFn({ method: "POST" })
       arm_cm: data.arm_cm ?? null,
       thigh_cm: data.thigh_cm ?? null,
     });
-    if (error) throw error;
+    if (error) dbError(error);
     return { ok: true };
   });
