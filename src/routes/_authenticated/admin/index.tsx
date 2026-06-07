@@ -16,6 +16,8 @@ function AdminHome() {
     queryKey: ["me"],
     queryFn: () => fetchMe(),
     refetchOnMount: "always",
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
   });
 
   if (isLoading) {

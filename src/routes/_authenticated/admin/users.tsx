@@ -36,6 +36,8 @@ function AdminUsers() {
     queryKey: ["me"],
     queryFn: () => fetchMe(),
     refetchOnMount: "always",
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
   });
 
   const { data: users = [], isLoading } = useQuery({

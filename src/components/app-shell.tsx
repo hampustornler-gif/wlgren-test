@@ -16,6 +16,8 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     queryFn: () => fetchMe(),
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
   });
   const [refreshing, setRefreshing] = useState(false);
 
