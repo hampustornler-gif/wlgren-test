@@ -15,7 +15,7 @@ const MUSCLES = ["", "abdominals", "biceps", "chest", "shoulders", "triceps", "q
 const LEVELS  = ["", "beginner", "intermediate", "expert"];
 
 async function fetchExercises({ search, muscle, level }: { search: string; muscle: string; level: string }) {
-  let q = supabase.from("global_exercises").select("id,name,primary_muscle,equipment,level,category,image_url,image_url_2,instructions").order("name");
+  let q = (supabase as any).from("global_exercises").select("id,name,primary_muscle,equipment,level,category,image_url,image_url_2,instructions").order("name");
   if (search) q = q.ilike("name", `%${search}%`);
   if (muscle) q = q.eq("primary_muscle", muscle);
   if (level)  q = q.eq("level", level);
