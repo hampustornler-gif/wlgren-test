@@ -110,14 +110,45 @@ export const listClients = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const { data: profiles, error } = await supabase
       .from("profiles")
       .select("id, display_name, trainer_id, created_at")
       .or(`trainer_id.eq.${userId},trainer_id.is.null`)
       .order("created_at", { ascending: false });
     if (error) throw error;
-    // Exclude trainer self
-    return (data ?? []).filter((p) => p.id !== userId);
+    const clients = (profiles ?? []).filter((p) => p.id !== userId);
+    const ids = clients.map((c) => c.id);
+    if (ids.length === 0) {
+      return [] as Array<(typeof clients)[number] & { last_session_at: string | null; program_count: number; last_weight_kg: number | null }>;
+    }
+
+    const [{ data: sessions }, { data: assignments }, { data: measurements }] = await Promise.all([
+      supabase.from("workout_sessions").select("client_id, started_at").in("client_id", ids),
+      supabase.from("program_assignments").select("client_id").in("client_id", ids),
+      supabase.from("body_measurements").select("client_id, weight_kg, measured_at").in("client_id", ids),
+    ]);
+
+    const lastSession = new Map<string, string>();
+    (sessions ?? []).forEach((s: any) => {
+      const cur = lastSession.get(s.client_id);
+      if (!cur || s.started_at > cur) lastSession.set(s.client_id, s.started_at);
+    });
+    const programCount = new Map<string, number>();
+    (assignments ?? []).forEach((a: any) => {
+      programCount.set(a.client_id, (programCount.get(a.client_id) ?? 0) + 1);
+    });
+    const lastWeight = new Map<string, { at: string; w: number | null }>();
+    (measurements ?? []).forEach((m: any) => {
+      const cur = lastWeight.get(m.client_id);
+      if (!cur || m.measured_at > cur.at) lastWeight.set(m.client_id, { at: m.measured_at, w: m.weight_kg });
+    });
+
+    return clients.map((c) => ({
+      ...c,
+      last_session_at: lastSession.get(c.id) ?? null,
+      program_count: programCount.get(c.id) ?? 0,
+      last_weight_kg: lastWeight.get(c.id)?.w ?? null,
+    }));
   });
 
 export const claimClient = createServerFn({ method: "POST" })
@@ -130,6 +161,132 @@ export const claimClient = createServerFn({ method: "POST" })
       .update({ trainer_id: userId })
       .eq("id", data.clientId);
     if (error) throw error;
+    return { ok: true };
+  });
+
+export const releaseClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ clientId: z.string().uuid() }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ trainer_id: null })
+      .eq("id", data.clientId)
+      .eq("trainer_id", userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+function randomToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export const listInvites = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("client_invites")
+      .select("*")
+      .eq("trainer_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  });
+
+export const createClientInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      email: z.union([z.string().trim().email().max(255), z.literal("")]).optional(),
+      name: z.union([z.string().trim().max(80), z.literal("")]).optional(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const token = randomToken();
+    const { data: row, error } = await supabase
+      .from("client_invites")
+      .insert({
+        trainer_id: userId,
+        email: data.email || null,
+        name: data.name || null,
+        token,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return row;
+  });
+
+export const revokeInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("client_invites")
+      .delete()
+      .eq("id", data.id)
+      .eq("trainer_id", userId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const getInviteByToken = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ token: z.string().min(8).max(128) }))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: invite } = await supabaseAdmin
+      .from("client_invites")
+      .select("id, trainer_id, name, email, expires_at, accepted_at")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (!invite) return { ok: false as const, reason: "not_found" as const };
+    if (invite.accepted_at) return { ok: false as const, reason: "accepted" as const };
+    if (new Date(invite.expires_at) < new Date()) return { ok: false as const, reason: "expired" as const };
+    const { data: trainer } = await supabaseAdmin
+      .from("profiles")
+      .select("display_name")
+      .eq("id", invite.trainer_id)
+      .maybeSingle();
+    return {
+      ok: true as const,
+      invite: {
+        id: invite.id,
+        trainerName: trainer?.display_name ?? "Din tränare",
+        email: invite.email,
+        name: invite.name,
+      },
+    };
+  });
+
+export const acceptInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ token: z.string().min(8).max(128) }))
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: invite } = await supabaseAdmin
+      .from("client_invites")
+      .select("id, trainer_id, expires_at, accepted_at")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (!invite) throw new Error("Inbjudan hittades inte");
+    if (invite.accepted_at) throw new Error("Inbjudan är redan använd");
+    if (new Date(invite.expires_at) < new Date()) throw new Error("Inbjudan har gått ut");
+    const { error: upErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ trainer_id: invite.trainer_id })
+      .eq("id", userId);
+    if (upErr) throw upErr;
+    await supabaseAdmin
+      .from("client_invites")
+      .update({ accepted_at: new Date().toISOString(), accepted_by: userId })
+      .eq("id", invite.id);
     return { ok: true };
   });
 

@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      client_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          name: string | null
+          token: string
+          trainer_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          name?: string | null
+          token: string
+          trainer_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          name?: string | null
+          token?: string
+          trainer_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
