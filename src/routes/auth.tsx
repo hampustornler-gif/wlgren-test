@@ -36,6 +36,11 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [needsConfirm, setNeedsConfirm] = useState(false);
 
+  const pendingInvite = (() => {
+    try { return sessionStorage.getItem("pendingInvite"); } catch { return null; }
+  })();
+  const inviteRedirect = pendingInvite ? `${window.location.origin}/invite/${pendingInvite}` : window.location.origin;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,7 +51,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: inviteRedirect,
             data: { display_name: name },
           },
         });
@@ -68,7 +73,11 @@ function AuthPage() {
           }
           throw error;
         }
-        nav({ to: "/" });
+        if (pendingInvite) {
+          nav({ to: "/invite/$token", params: { token: pendingInvite } });
+        } else {
+          nav({ to: "/" });
+        }
       }
     } catch (e: any) {
       toast.error(translateError(e.message ?? "Något gick fel"));
@@ -76,6 +85,7 @@ function AuthPage() {
       setLoading(false);
     }
   };
+
 
   const resendConfirmation = async () => {
     setLoading(true);
