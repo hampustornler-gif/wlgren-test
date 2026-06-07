@@ -38,12 +38,12 @@ import { ArrowRight, Copy, Mail, Search, Trash2, UserPlus, X } from "lucide-reac
 import { toast } from "sonner";
 
 const searchSchema = z.object({
-  q: fallback(z.string(), "").default(""),
-  tab: fallback(z.enum(["all", "mine", "unassigned"]), "mine").default("mine"),
+  q: z.string().catch(""),
+  tab: z.enum(["all", "mine", "unassigned"]).catch("mine"),
 });
 
 export const Route = createFileRoute("/_authenticated/trainer/clients/")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: searchSchema,
   component: ClientsPage,
 });
 
