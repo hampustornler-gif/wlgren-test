@@ -105,7 +105,7 @@ function ProgramsPage() {
           </div>
         )}
 
-        {/* PPL Seed card */}
+        {/* PPL Seed card — only when no programs exist */}
         {programs.length === 0 && (
           <div className="card-3d rounded-3xl p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -179,19 +179,6 @@ function ProgramsPage() {
               </div>
             ))}
           </div>
-        )}
-
-        {programs.length > 0 && (
-          <button
-            onClick={() => seed.mutate()}
-            disabled={seed.isPending}
-            className="w-full glass rounded-2xl p-4 flex items-center gap-3 hover:border-white/20 transition-all group"
-          >
-            <Sparkles className="size-4 text-primary/60 group-hover:text-primary transition-colors" />
-            <span className="text-sm text-white/40 group-hover:text-white/70 transition-colors">
-              {seed.isPending ? "Skapar…" : "Lägg till Push / Pull / Legs-mallar"}
-            </span>
-          </button>
         )}
       </div>
     </AppShell>
