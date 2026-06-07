@@ -13,6 +13,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthenticatedTrainerRouteRouteImport } from './routes/_authenticated/trainer/route'
 import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
 import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
@@ -47,6 +48,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTrainerRouteRoute =
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/trainer': typeof AuthenticatedTrainerRouteRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/history': typeof AuthenticatedAppHistoryRoute
   '/app/measurements': typeof AuthenticatedAppMeasurementsRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/history': typeof AuthenticatedAppHistoryRoute
   '/app/measurements': typeof AuthenticatedAppMeasurementsRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/_authenticated/trainer': typeof AuthenticatedTrainerRouteRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/app/history': typeof AuthenticatedAppHistoryRoute
   '/_authenticated/app/measurements': typeof AuthenticatedAppMeasurementsRoute
@@ -211,6 +220,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/trainer'
+    | '/invite/$token'
     | '/admin/users'
     | '/app/history'
     | '/app/measurements'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/invite/$token'
     | '/admin/users'
     | '/app/history'
     | '/app/measurements'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/_authenticated/trainer'
+    | '/invite/$token'
     | '/_authenticated/admin/users'
     | '/_authenticated/app/history'
     | '/_authenticated/app/measurements'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/trainer': {
@@ -505,6 +525,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
