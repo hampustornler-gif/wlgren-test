@@ -11,10 +11,11 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
   const router = useRouter();
   const qc = useQueryClient();
   const fetchMe = useServerFn(getMe);
-  const { data: me } = useQuery({
+  const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ["me"],
     queryFn: () => fetchMe(),
     refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -58,8 +59,8 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     { to: "/app/progress", label: "Utveckling", icon: LineChart },
     { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
   ];
-  const nav = me?.isAdmin ? adminNav : me?.isTrainer ? trainerNav : clientNav;
-  const roleLabel = me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Kund";
+  const nav = meLoading ? [] : me?.isAdmin ? adminNav : me?.isTrainer ? trainerNav : clientNav;
+  const roleLabel = meLoading ? "Laddar…" : me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Kund";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -85,7 +86,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </nav>
         <div className="mt-auto flex flex-col gap-1 pt-4 border-t border-border">
           <div className="px-3 py-2 text-xs text-muted-foreground">
-            {me?.profile?.display_name} · {roleLabel}
+            {meLoading ? "Laddar konto…" : `${me?.profile?.display_name ?? "Konto"} · ${roleLabel}`}
           </div>
           <button
             onClick={onRefreshRoles}
@@ -117,7 +118,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
               <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
             <User2 className="size-4" />
-            {me?.profile?.display_name}
+            {meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}
           </div>
         </header>
         <main className="p-4 md:p-8 max-w-5xl w-full mx-auto flex-1">{children}</main>
