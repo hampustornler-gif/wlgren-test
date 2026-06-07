@@ -12,8 +12,104 @@ export const getMe = createServerFn({ method: "GET" })
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", userId),
     ]);
-    const isTrainer = !!roles?.some((r) => r.role === "trainer");
-    return { userId, profile, isTrainer };
+    const roleList = (roles ?? []).map((r) => r.role);
+    const isTrainer = roleList.includes("trainer");
+    const isAdmin = roleList.includes("admin");
+    return { userId, profile, isTrainer, isAdmin, roles: roleList };
+  });
+
+// ---------- ADMIN ----------
+async function assertAdmin(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+  if (!data) throw new Error("Forbidden: admin role required");
+}
+
+export const claimFirstAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc("claim_first_admin");
+    if (error) throw error;
+    return { claimed: !!data };
+  });
+
+export const listAllUsers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const [{ data: profiles }, { data: roles }] = await Promise.all([
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+      supabase.from("user_roles").select("user_id, role"),
+    ]);
+    const rolesByUser = new Map<string, string[]>();
+    (roles ?? []).forEach((r) => {
+      const list = rolesByUser.get(r.user_id) ?? [];
+      list.push(r.role);
+      rolesByUser.set(r.user_id, list);
+    });
+    return (profiles ?? []).map((p) => ({ ...p, roles: rolesByUser.get(p.id) ?? [] }));
+  });
+
+const roleEnum = z.enum(["admin", "trainer", "client"]);
+
+export const setUserRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      userId: z.string().uuid(),
+      role: roleEnum,
+      enabled: z.boolean(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    if (data.enabled) {
+      const { data: existing } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", data.userId)
+        .eq("role", data.role)
+        .maybeSingle();
+      if (!existing) {
+        const { error } = await supabase
+          .from("user_roles")
+          .insert({ user_id: data.userId, role: data.role });
+        if (error) throw error;
+      }
+    } else {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", data.userId)
+        .eq("role", data.role);
+      if (error) throw error;
+    }
+    return { ok: true };
+  });
+
+export const assignClientToTrainer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      clientId: z.string().uuid(),
+      trainerId: z.string().uuid().nullable(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    await assertAdmin(supabase, userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ trainer_id: data.trainerId })
+      .eq("id", data.clientId);
+    if (error) throw error;
+    return { ok: true };
   });
 
 // ---------- TRAINER ----------

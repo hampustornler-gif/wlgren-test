@@ -14,11 +14,14 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTrainerRouteRouteImport } from './routes/_authenticated/trainer/route'
 import { Route as AuthenticatedAppRouteRouteImport } from './routes/_authenticated/app/route'
+import { Route as AuthenticatedAdminRouteRouteImport } from './routes/_authenticated/admin/route'
 import { Route as AuthenticatedTrainerIndexRouteImport } from './routes/_authenticated/trainer/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin/index'
 import { Route as AuthenticatedAppProgressRouteImport } from './routes/_authenticated/app/progress'
 import { Route as AuthenticatedAppMeasurementsRouteImport } from './routes/_authenticated/app/measurements'
 import { Route as AuthenticatedAppHistoryRouteImport } from './routes/_authenticated/app/history'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin/users'
 import { Route as AuthenticatedTrainerProgramsIndexRouteImport } from './routes/_authenticated/trainer/programs/index'
 import { Route as AuthenticatedTrainerExercisesIndexRouteImport } from './routes/_authenticated/trainer/exercises/index'
 import { Route as AuthenticatedTrainerClientsIndexRouteImport } from './routes/_authenticated/trainer/clients/index'
@@ -51,6 +54,11 @@ const AuthenticatedAppRouteRoute = AuthenticatedAppRouteRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminRouteRoute = AuthenticatedAdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTrainerIndexRoute =
   AuthenticatedTrainerIndexRouteImport.update({
     id: '/',
@@ -61,6 +69,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
 const AuthenticatedAppProgressRoute =
   AuthenticatedAppProgressRouteImport.update({
@@ -78,6 +91,11 @@ const AuthenticatedAppHistoryRoute = AuthenticatedAppHistoryRouteImport.update({
   id: '/history',
   path: '/history',
   getParentRoute: () => AuthenticatedAppRouteRoute,
+} as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedAdminRouteRoute,
 } as any)
 const AuthenticatedTrainerProgramsIndexRoute =
   AuthenticatedTrainerProgramsIndexRouteImport.update({
@@ -119,11 +137,14 @@ const AuthenticatedAppSessionsSessionIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/trainer': typeof AuthenticatedTrainerRouteRouteWithChildren
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/history': typeof AuthenticatedAppHistoryRoute
   '/app/measurements': typeof AuthenticatedAppMeasurementsRoute
   '/app/progress': typeof AuthenticatedAppProgressRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/trainer/': typeof AuthenticatedTrainerIndexRoute
   '/app/sessions/$sessionId': typeof AuthenticatedAppSessionsSessionIdRoute
@@ -136,9 +157,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/history': typeof AuthenticatedAppHistoryRoute
   '/app/measurements': typeof AuthenticatedAppMeasurementsRoute
   '/app/progress': typeof AuthenticatedAppProgressRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/trainer': typeof AuthenticatedTrainerIndexRoute
   '/app/sessions/$sessionId': typeof AuthenticatedAppSessionsSessionIdRoute
@@ -153,11 +176,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteRouteWithChildren
   '/_authenticated/trainer': typeof AuthenticatedTrainerRouteRouteWithChildren
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/app/history': typeof AuthenticatedAppHistoryRoute
   '/_authenticated/app/measurements': typeof AuthenticatedAppMeasurementsRoute
   '/_authenticated/app/progress': typeof AuthenticatedAppProgressRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/trainer/': typeof AuthenticatedTrainerIndexRoute
   '/_authenticated/app/sessions/$sessionId': typeof AuthenticatedAppSessionsSessionIdRoute
@@ -172,11 +198,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/admin'
     | '/app'
     | '/trainer'
+    | '/admin/users'
     | '/app/history'
     | '/app/measurements'
     | '/app/progress'
+    | '/admin/'
     | '/app/'
     | '/trainer/'
     | '/app/sessions/$sessionId'
@@ -189,9 +218,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/admin/users'
     | '/app/history'
     | '/app/measurements'
     | '/app/progress'
+    | '/admin'
     | '/app'
     | '/trainer'
     | '/app/sessions/$sessionId'
@@ -205,11 +236,14 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/_authenticated/trainer'
+    | '/_authenticated/admin/users'
     | '/_authenticated/app/history'
     | '/_authenticated/app/measurements'
     | '/_authenticated/app/progress'
+    | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/trainer/'
     | '/_authenticated/app/sessions/$sessionId'
@@ -263,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/trainer/': {
       id: '/_authenticated/trainer/'
       path: '/'
@@ -276,6 +317,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/app/progress': {
       id: '/_authenticated/app/progress'
@@ -297,6 +345,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/history'
       preLoaderRoute: typeof AuthenticatedAppHistoryRouteImport
       parentRoute: typeof AuthenticatedAppRouteRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRouteRoute
     }
     '/_authenticated/trainer/programs/': {
       id: '/_authenticated/trainer/programs/'
@@ -342,6 +397,22 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedAdminRouteRouteChildren {
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteRouteChildren: AuthenticatedAdminRouteRouteChildren =
+  {
+    AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+    AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  }
+
+const AuthenticatedAdminRouteRouteWithChildren =
+  AuthenticatedAdminRouteRoute._addFileChildren(
+    AuthenticatedAdminRouteRouteChildren,
+  )
 
 interface AuthenticatedAppRouteRouteChildren {
   AuthenticatedAppHistoryRoute: typeof AuthenticatedAppHistoryRoute
@@ -395,11 +466,13 @@ const AuthenticatedTrainerRouteRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRouteRoute: typeof AuthenticatedAdminRouteRouteWithChildren
   AuthenticatedAppRouteRoute: typeof AuthenticatedAppRouteRouteWithChildren
   AuthenticatedTrainerRouteRoute: typeof AuthenticatedTrainerRouteRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRouteRoute: AuthenticatedAdminRouteRouteWithChildren,
   AuthenticatedAppRouteRoute: AuthenticatedAppRouteRouteWithChildren,
   AuthenticatedTrainerRouteRoute: AuthenticatedTrainerRouteRouteWithChildren,
 }
@@ -415,13 +488,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

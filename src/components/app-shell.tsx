@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, LineChart, Users, ListChecks, User2, LogOut, Ruler } from "lucide-react";
+import { Dumbbell, LineChart, Users, ListChecks, User2, LogOut, Ruler, Shield } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/app.functions";
@@ -19,6 +19,12 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     router.navigate({ to: "/auth", replace: true });
   };
 
+  const adminNav = [
+    { to: "/admin", label: "Översikt", icon: LineChart },
+    { to: "/admin/users", label: "Användare", icon: Shield },
+    { to: "/trainer/clients", label: "Kunder", icon: Users },
+    { to: "/trainer/programs", label: "Program", icon: ListChecks },
+  ];
   const trainerNav = [
     { to: "/trainer", label: "Översikt", icon: LineChart },
     { to: "/trainer/clients", label: "Kunder", icon: Users },
@@ -31,7 +37,8 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     { to: "/app/progress", label: "Utveckling", icon: LineChart },
     { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
   ];
-  const nav = me?.isTrainer ? trainerNav : clientNav;
+  const nav = me?.isAdmin ? adminNav : me?.isTrainer ? trainerNav : clientNav;
+  const roleLabel = me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Kund";
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -57,7 +64,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </nav>
         <div className="mt-auto flex flex-col gap-1 pt-4 border-t border-border">
           <div className="px-3 py-2 text-xs text-muted-foreground">
-            {me?.profile?.display_name} · {me?.isTrainer ? "Tränare" : "Kund"}
+            {me?.profile?.display_name} · {roleLabel}
           </div>
           <button
             onClick={onSignOut}

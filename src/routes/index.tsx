@@ -10,8 +10,10 @@ export const Route = createFileRoute("/")({
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user.id);
-    const isTrainer = !!roles?.some((r) => r.role === "trainer");
-    throw redirect({ to: isTrainer ? "/trainer" : "/app" });
+    const list = roles?.map((r) => r.role) ?? [];
+    if (list.includes("admin")) throw redirect({ to: "/admin" });
+    if (list.includes("trainer")) throw redirect({ to: "/trainer" });
+    throw redirect({ to: "/app" });
   },
   component: () => null,
 });

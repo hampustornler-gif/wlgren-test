@@ -1,51 +1,58 @@
+## Mål
 
-# Träningsapp för dig och dina kunder
+Lägg till en separat **admin**-roll så att du kan ha både flera tränare och en eller flera administratörer i appen. Admin är högsta rollen och kan hantera alla användare och roller.
 
-En ljus, minimalistisk webbapp där du som tränare skapar program till dina kunder, och kunderna loggar sina pass, vikt och mått — med tydliga utvecklingsgrafer.
+## Roller efter ändringen
 
-## Roller
+- **admin** — ser och hanterar alla användare, kan tilldela/ta bort rollerna `admin`, `trainer`, `client`. Kan koppla kunder till tränare. Ser allt som tränare ser.
+- **trainer** — som idag: skapar övningar/program, hanterar sina egna kunder.
+- **client** — som idag: loggar pass och mått.
 
-- **Tränare (du):** skapar övningar och program, tilldelar program till kunder, ser alla kunders loggar och utveckling.
-- **Kund:** ser sina tilldelade program, loggar pass (set/reps/vikt), loggar kroppsvikt och mått, ser sina egna grafer.
+Första registrerade kontot blir nu **admin** (idag blir det `trainer`). Efterföljande konton blir `client` som default, och admin uppgraderar manuellt till `trainer` eller `admin` vid behov.
 
-## Huvudsidor
+## Vad jag bygger
 
-1. **Inloggning / registrering** (e-post + lösenord). Första kontot blir tränare; nya konton blir kunder som default.
-2. **Tränarvy**
-   - Kunder: lista över kunder, klicka in för att se deras pass och utveckling.
-   - Program: skapa program med övningar (namn, set, reps, viloperiod, anteckning). Tilldela till en eller flera kunder.
-   - Övningsbibliotek.
-3. **Kundvy**
-   - Idag / Mina program: starta tilldelat pass, logga set för set (vikt + reps), spara.
-   - Historik: lista över avklarade pass.
-   - Utveckling: grafer per övning (max vikt, total volym över tid) + graf för kroppsvikt och mått.
-   - Kroppsmått: logga vikt, midja, bröst, arm, lår, foto (valfritt).
-4. **Profil / logga ut.**
+### 1. Databasändringar (migration)
 
-## Design
+- Lägg till `'admin'` i enum `app_role`.
+- Uppdatera triggern `handle_new_user` så att första kontot blir `admin` istället för `trainer`.
+- Lägg till RLS-policies så att admin kan:
+  - läsa alla `profiles`, `user_roles`, `exercises`, `programs`, `program_assignments`, `program_exercises`, `workout_sessions`, `set_logs`, `body_measurements`
+  - sätta/ändra `trainer_id` på valfri profil
+  - lägga till och ta bort rader i `user_roles` (idag kan ingen göra det via API)
+- Begränsning: en admin kan inte ta bort sin egen sista admin-roll (skydd mot utelåsning).
 
-Ljus och minimalistisk (Apple-aktig): vit/off-white bakgrund, mycket whitespace, mjuka kort med subtila skuggor, en lugn accentfärg (mörk indigo), Inter-typografi. Grafer i samma palett. Tokens i `src/styles.css` (oklch).
+### 2. Server functions (`src/lib/app.functions.ts`)
 
-## Tekniskt
+Nya, alla skyddade med `requireSupabaseAuth` och en intern `requireAdmin`-check via `has_role`:
 
-- **Stack:** TanStack Start (befintlig), shadcn/ui, Tailwind, Recharts för grafer.
-- **Backend:** Lovable Cloud (aktiveras).
-- **Auth:** e-post + lösenord. `_authenticated` skyddar appen.
-- **Roller:** `app_role` enum (`trainer`, `client`) + `user_roles`-tabell + `has_role()` security-definer-funktion (RLS-säkert mönster).
-- **Tabeller (publika, med GRANTs + RLS):**
-  - `profiles` (id, display_name, trainer_id för kund→tränare-koppling)
-  - `user_roles` (user_id, role)
-  - `exercises` (id, trainer_id, name, notes)
-  - `programs` (id, trainer_id, name, description)
-  - `program_exercises` (program_id, exercise_id, order, target_sets, target_reps, rest_seconds, note)
-  - `program_assignments` (program_id, client_id, assigned_at)
-  - `workout_sessions` (id, client_id, program_id, started_at, completed_at, notes)
-  - `set_logs` (session_id, exercise_id, set_index, weight_kg, reps, rpe)
-  - `body_measurements` (client_id, measured_at, weight_kg, waist_cm, chest_cm, arm_cm, thigh_cm, photo_url)
-- **RLS:** kund ser bara sin egen data; tränare ser data för kunder där `profiles.trainer_id = auth.uid()` via `has_role` + join-check.
-- **Server functions** (`createServerFn` + `requireSupabaseAuth`) för all data — inga direkta DB-queries i loaders. Query via TanStack Query (`ensureQueryData` + `useSuspenseQuery`).
-- **Validering:** zod på alla server-fn inputs (vikt 0–999, reps 0–999, strängar trim+max).
+- `listAllUsers()` — alla användare med roller och tilldelad tränare.
+- `setUserRole({ userId, role, enabled })` — lägg till eller ta bort en roll.
+- `assignClientToTrainer({ clientId, trainerId })` — sätt/byt tränare för en kund.
 
-## Vad jag bygger i denna iteration (v1)
+Validering via zod på alla inputs.
 
-Allt ovan i en första körbar version: auth, roller, tränare skapar övningar + program, tilldelar till kund, kund loggar pass och mått, grafer för utveckling. Inga aviseringar, betalningar eller mobilappar i v1.
+### 3. UI
+
+- Ny admin-vy under `src/routes/_authenticated/admin/`:
+  - `admin/index.tsx` — översikt.
+  - `admin/users.tsx` — tabell med alla användare: namn, e-post-prefix, roller (checkboxar för admin/trainer/client), dropdown för tränarkoppling. Sparar via server fn.
+- `app-shell.tsx`: lägg till "Admin"-länk i sidonav/bottennav när inloggad är admin.
+- `src/routes/index.tsx`: skicka admin → `/admin`, tränare → `/trainer`, kund → `/app`.
+
+### 4. Bakåtkompatibilitet
+
+Befintligt första konto (du, som är `trainer`) påverkas inte automatiskt. Jag lägger till en engångs-knapp i admin-vyn ("Gör mig till admin") som bara fungerar om det inte finns någon admin än — så du kan promota dig själv första gången.
+
+## Teknisk sammanfattning
+
+- Enum-ändring: `ALTER TYPE public.app_role ADD VALUE 'admin'`.
+- `has_role(uid, 'admin')` används i alla nya policies (security-definer, RLS-säkert mönster).
+- Inga ändringar i auth-flöde, inga edge functions, ingen Supabase-konfiguration utöver migrationen.
+- TanStack Query + `createServerFn` enligt befintligt mönster.
+
+## Utanför scope
+
+- Mejlbjudningar till nya tränare/admins.
+- Audit log över rolländringar.
+- Granulär per-kund-behörighet mellan flera tränare (kund hör fortfarande till **en** tränare via `profiles.trainer_id`).
