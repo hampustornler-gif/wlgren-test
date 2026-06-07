@@ -223,7 +223,9 @@ export const createClientInvite = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await assertTrainer(supabase, userId);
     const token = randomToken();
+
     const { data: row, error } = await supabase
       .from("client_invites")
       .insert({
