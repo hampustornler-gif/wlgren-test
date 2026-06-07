@@ -1,22 +1,43 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dumbbell, LineChart, Users, ListChecks, User2, LogOut, Ruler, Shield } from "lucide-react";
+import { Dumbbell, LineChart, Users, ListChecks, User2, LogOut, Ruler, Shield, RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/app.functions";
+import { toast } from "sonner";
 
 export function AppShell({ children, title }: { children: ReactNode; title?: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const fetchMe = useServerFn(getMe);
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => fetchMe(),
+    refetchOnWindowFocus: true,
+  });
+  const [refreshing, setRefreshing] = useState(false);
 
   const onSignOut = async () => {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
     router.navigate({ to: "/auth", replace: true });
+  };
+
+  const onRefreshRoles = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await supabase.auth.refreshSession();
+      await qc.invalidateQueries();
+      await router.invalidate();
+      toast.success("Behörigheter uppdaterade");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Kunde inte uppdatera");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const adminNav = [
@@ -67,6 +88,14 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             {me?.profile?.display_name} · {roleLabel}
           </div>
           <button
+            onClick={onRefreshRoles}
+            disabled={refreshing}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 disabled:opacity-60"
+          >
+            <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Uppdaterar…" : "Uppdatera behörigheter"}
+          </button>
+          <button
             onClick={onSignOut}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60"
           >
@@ -79,6 +108,14 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between">
           <h1 className="text-base font-semibold tracking-tight">{title ?? ""}</h1>
           <div className="md:hidden flex items-center gap-2 text-sm text-muted-foreground">
+            <button
+              onClick={onRefreshRoles}
+              disabled={refreshing}
+              aria-label="Uppdatera behörigheter"
+              className="p-1.5 rounded-md hover:bg-accent/60 disabled:opacity-60"
+            >
+              <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
             <User2 className="size-4" />
             {me?.profile?.display_name}
           </div>
