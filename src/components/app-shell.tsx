@@ -88,6 +88,14 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             {me?.profile?.display_name} · {roleLabel}
           </div>
           <button
+            onClick={onRefreshRoles}
+            disabled={refreshing}
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 disabled:opacity-60"
+          >
+            <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Uppdaterar…" : "Uppdatera behörigheter"}
+          </button>
+          <button
             onClick={onSignOut}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60"
           >
@@ -100,6 +108,14 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between">
           <h1 className="text-base font-semibold tracking-tight">{title ?? ""}</h1>
           <div className="md:hidden flex items-center gap-2 text-sm text-muted-foreground">
+            <button
+              onClick={onRefreshRoles}
+              disabled={refreshing}
+              aria-label="Uppdatera behörigheter"
+              className="p-1.5 rounded-md hover:bg-accent/60 disabled:opacity-60"
+            >
+              <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
+            </button>
             <User2 className="size-4" />
             {me?.profile?.display_name}
           </div>
