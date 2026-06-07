@@ -16,8 +16,8 @@ export const Route = createFileRoute("/_authenticated/trainer/programs/")({
 
 const PPL_PREVIEW = [
   { label: "Push", emoji: "💪", desc: "Bröst, axlar, triceps" },
-  { label: "Pull", emoji: "🦵", desc: "Rygg, biceps" },
-  { label: "Legs", emoji: "🤵", desc: "Quads, hamstrings, säten" },
+  { label: "Pull", emoji: "🏋️", desc: "Rygg, biceps" },
+  { label: "Legs", emoji: "🦵", desc: "Quads, hamstrings, säten" },
 ];
 
 function ProgramsPage() {
@@ -152,7 +152,6 @@ function ProgramsPage() {
                   <ArrowRight className="size-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-0.5 transition-all" />
                 </Link>
 
-                {/* Delete button */}
                 {confirmId === p.id ? (
                   <div className="flex items-center gap-2 pr-3 shrink-0">
                     <button
@@ -182,7 +181,6 @@ function ProgramsPage() {
           </div>
         )}
 
-        {/* Add PPL when programs exist */}
         {programs.length > 0 && (
           <button
             onClick={() => seed.mutate()}
@@ -196,8 +194,6 @@ function ProgramsPage() {
           </button>
         )}
       </div>
-
-      {/* Confirm delete overlay — just in case confirmId is set */}
     </AppShell>
   );
 }

@@ -3,7 +3,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, LineChart, Users, ListChecks, User2,
-  LogOut, Ruler, Shield, Menu, X, ChevronRight,
+  LogOut, Ruler, Shield, Menu, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -86,30 +86,27 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
 
   const adminSection = {
     label: "Admin",
-    emoji: "🛡️",
     items: [
-      { to: "/admin",       label: "Översikt",   icon: LineChart },
-      { to: "/admin/users", label: "Användare",  icon: Shield },
+      { to: "/admin",       label: "Översikt",  icon: LineChart },
+      { to: "/admin/users", label: "Användare", icon: Shield },
     ],
   };
   const trainerSection = {
     label: "Tränare",
-    emoji: "🏃",
     items: [
-      { to: "/trainer",          label: "Översikt",  icon: LineChart },
-      { to: "/trainer/clients",  label: "Kunder",    icon: Users },
-      { to: "/trainer/programs", label: "Program",   icon: ListChecks },
-      { to: "/trainer/exercises",label: "Övningar",  icon: Dumbbell },
+      { to: "/trainer",           label: "Översikt",  icon: LineChart },
+      { to: "/trainer/clients",   label: "Kunder",    icon: Users },
+      { to: "/trainer/programs",  label: "Program",   icon: ListChecks },
+      { to: "/trainer/exercises", label: "Övningar",  icon: Dumbbell },
     ],
   };
   const clientSection = {
     label: "Klient",
-    emoji: "💪",
     items: [
-      { to: "/app",              label: "Idag",       icon: Dumbbell },
-      { to: "/app/history",      label: "Historik",   icon: ListChecks },
-      { to: "/app/progress",     label: "Utveckling", icon: LineChart },
-      { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
+      { to: "/app",               label: "Idag",       icon: Dumbbell },
+      { to: "/app/history",       label: "Historik",   icon: ListChecks },
+      { to: "/app/progress",      label: "Utveckling", icon: LineChart },
+      { to: "/app/measurements",  label: "Kroppsmått", icon: Ruler },
     ],
   };
 
@@ -144,7 +141,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     <div className="min-h-screen bg-background flex">
       {/* ===== DESKTOP SIDEBAR ===== */}
       <aside className="hidden md:flex w-64 shrink-0 border-r border-white/[0.05] flex-col bg-sidebar relative overflow-hidden">
-        {/* Sidebar ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-20 -left-20 w-60 h-60 rounded-full bg-primary/8 blur-3xl" />
           <div className="absolute bottom-20 -right-10 w-40 h-40 rounded-full bg-violet-500/6 blur-2xl" />
@@ -163,12 +159,11 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
 
         <div className="h-px mx-4 divider-glow mb-3" />
 
-        {/* Nav */}
         <nav className="flex flex-col gap-5 flex-1 overflow-y-auto px-3 py-2 relative">
           {sections.map((section, si) => (
             <div key={section.label} className={["animate-fade-up", `stagger-${si + 1}`].join(" ")}>
               {sections.length > 1 && (
-                <div className="px-3 mb-1.5 flex items-center gap-2">
+                <div className="px-3 mb-1.5">
                   <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/25">{section.label}</span>
                 </div>
               )}
@@ -183,7 +178,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
 
         <div className="h-px mx-4 divider-glow" />
 
-        {/* User footer */}
         <div className="p-3 pb-5 relative">
           <div className="glass rounded-xl p-3 mb-1 animate-fade-up stagger-5">
             <div className="flex items-center gap-3">
@@ -212,18 +206,11 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </div>
       </aside>
 
-      {/* ===== MAIN CONTENT ===== */}
+      {/* ===== MAIN ===== */}
       <div className="flex-1 flex flex-col min-w-0">
-
-        {/* Header */}
-        <header className="border-b border-white/[0.05] bg-background/40 backdrop-blur-2xl px-5 md:px-8 h-14 flex items-center justify-between sticky top-0 z-10">
-          {/* Top highlight line */}
+        <header className="border-b border-white/[0.05] bg-background/40 backdrop-blur-2xl px-5 md:px-8 h-14 flex items-center justify-between sticky top-0 z-10 relative">
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-
-          <h1 className="text-sm font-bold tracking-tight truncate text-white/80">
-            {title ?? ""}
-          </h1>
-
+          <h1 className="text-sm font-bold tracking-tight truncate text-white/80">{title ?? ""}</h1>
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="hidden sm:flex items-center gap-2 glass rounded-xl px-3 py-1.5">
               <User2 className="size-3.5 text-white/30" />
@@ -239,7 +226,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           </div>
         </header>
 
-        {/* Page content with entrance animation */}
         <main
           key={pageKey}
           className="page-enter p-4 md:p-8 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-10 max-w-5xl w-full mx-auto flex-1 min-h-0"
@@ -247,7 +233,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           {children}
         </main>
 
-        {/* Mobile bottom nav */}
         <nav
           className="md:hidden border-t border-white/[0.05] bg-background/70 backdrop-blur-2xl grid sticky bottom-0 z-10 relative"
           style={{
@@ -256,7 +241,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             boxShadow: "0 -1px 0 oklch(1 0 0 / 5%), 0 -16px 40px -4px oklch(0 0 0 / 50%)",
           }}
         >
-          {/* Top highlight */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           {bottomNavItems.map((n) => (
             <BottomNavLink key={n.to} to={n.to} label={n.label} icon={n.icon} />
@@ -284,12 +268,10 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             className="fixed bottom-0 left-0 right-0 z-30 md:hidden rounded-t-3xl glass-strong animate-drawer-up"
             style={{ paddingBottom: "env(safe-area-inset-bottom)", maxHeight: "85vh" }}
           >
-            {/* Handle */}
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 rounded-full bg-white/15" />
             </div>
 
-            {/* Drawer header */}
             <div className="flex items-center justify-between px-5 pt-1 pb-4">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-white/8 border border-white/10 grid place-items-center">
@@ -338,7 +320,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
               >
                 <LogOut className="size-4 group-hover:translate-x-0.5 transition-transform" />
                 Logga ut
-                <ChevronRight className="size-3.5 ml-auto opacity-30 group-hover:opacity-60" />
               </button>
             </div>
           </div>
