@@ -294,13 +294,15 @@ export const acceptInvite = createServerFn({ method: "POST" })
 export const listExercises = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("exercises")
-      .select("*")
-      .order("name");
+    const { data, error } = await (context.supabase as any)
+      .from("global_exercises")
+      .select("id,name,primary_muscle,equipment,level")
+      .order("name")
+      .limit(2000);
     if (error) throw error;
     return data ?? [];
   });
+
 
 export const createExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
