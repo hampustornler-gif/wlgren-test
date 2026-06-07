@@ -44,6 +44,7 @@ function AdminUsers() {
     onSuccess: () => {
       toast.success("Roll uppdaterad");
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      qc.invalidateQueries({ queryKey: ["me"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
   });
