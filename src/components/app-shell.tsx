@@ -70,7 +70,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     ],
   };
 
-  // Admin ser alla sektioner, tränare ser tränar + klient, klient ser bara klient
   const sections = meLoading
     ? []
     : me?.isAdmin
@@ -79,7 +78,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     ? [trainerSection, clientSection]
     : [clientSection];
 
-  // Flat nav for mobile bottom bar — use primary section only
   const mobileNav = meLoading
     ? []
     : me?.isAdmin
@@ -98,6 +96,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 border-r border-border flex-col p-4 gap-1 bg-sidebar">
         <div className="flex items-center gap-2 mb-5 px-2">
           <div className="size-8 rounded-lg bg-primary grid place-items-center text-primary-foreground">
@@ -159,40 +158,52 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </div>
       </aside>
 
+      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between">
-          <h1 className="text-base font-semibold tracking-tight">{title ?? ""}</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        {/* Header */}
+        <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between sticky top-0 z-10">
+          <h1 className="text-base font-semibold tracking-tight truncate">{title ?? ""}</h1>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
             <button
               onClick={onRefreshRoles}
               disabled={refreshing}
               aria-label="Uppdatera behörigheter"
-              className="p-1.5 rounded-md hover:bg-accent/60 disabled:opacity-60 md:hidden"
+              className="p-2 rounded-md hover:bg-accent/60 disabled:opacity-60 md:hidden"
             >
               <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
-            <User2 className="size-4" />
-            <span className="hidden sm:inline">{meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}</span>
+            <User2 className="size-4 shrink-0" />
+            <span className="hidden sm:inline truncate max-w-[120px]">{meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}</span>
             {!meLoading && (
-              <Badge variant="outline" className={`${roleBadgeClass} text-xs`}>
+              <Badge variant="outline" className={`${roleBadgeClass} text-xs hidden sm:inline-flex`}>
                 {roleLabel}
               </Badge>
             )}
           </div>
         </header>
 
-        <main className="p-4 md:p-8 max-w-5xl w-full mx-auto flex-1">{children}</main>
+        {/* Page content — pb accounts for mobile bottom nav + iPhone safe area */}
+        <main className="p-4 md:p-8 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-8 max-w-5xl w-full mx-auto flex-1 min-h-0">
+          {children}
+        </main>
 
-        <nav className="md:hidden border-t border-border bg-background grid sticky bottom-0" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, 1fr)` }}>
+        {/* Mobile bottom navigation */}
+        <nav
+          className="md:hidden border-t border-border bg-background/95 backdrop-blur grid sticky bottom-0 z-10"
+          style={{
+            gridTemplateColumns: `repeat(${mobileNav.length}, 1fr)`,
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
+        >
           {mobileNav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
-              activeProps={{ className: "text-foreground" }}
-              className="flex flex-col items-center gap-1 py-2 text-xs text-muted-foreground"
+              activeProps={{ className: "text-primary bg-primary/10" }}
+              className="flex flex-col items-center justify-center gap-1 py-3 px-1 text-xs text-muted-foreground hover:text-foreground active:bg-accent/60 transition-colors min-h-[56px]"
             >
-              <n.icon className="size-5" />
-              {n.label}
+              <n.icon className="size-5 shrink-0" />
+              <span className="leading-none truncate w-full text-center">{n.label}</span>
             </Link>
           ))}
         </nav>
