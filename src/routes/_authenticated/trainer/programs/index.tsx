@@ -3,11 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { createProgram, listPrograms, seedPPLPrograms } from "@/lib/app.functions";
+import { createProgram, deleteProgram, listPrograms, seedPPLPrograms } from "@/lib/app.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Plus, Dumbbell, Sparkles } from "lucide-react";
+import { ArrowRight, Plus, Dumbbell, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/trainer/programs/")({
@@ -24,11 +24,13 @@ function ProgramsPage() {
   const qc = useQueryClient();
   const fList = useServerFn(listPrograms);
   const fCreate = useServerFn(createProgram);
+  const fDelete = useServerFn(deleteProgram);
   const fSeed = useServerFn(seedPPLPrograms);
   const { data } = useQuery({ queryKey: ["programs"], queryFn: () => fList() });
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const create = useMutation({
     mutationFn: () => fCreate({ data: { name, description } }),
@@ -36,6 +38,16 @@ function ProgramsPage() {
       setName(""); setDescription(""); setShowForm(false);
       qc.invalidateQueries({ queryKey: ["programs"] });
       toast.success("Program skapat");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
+  });
+
+  const del = useMutation({
+    mutationFn: (programId: string) => fDelete({ data: { programId } }),
+    onSuccess: () => {
+      setConfirmId(null);
+      qc.invalidateQueries({ queryKey: ["programs"] });
+      toast.success("Program raderat");
     },
     onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
   });
@@ -78,21 +90,13 @@ function ProgramsPage() {
             >
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-white/60 text-xs font-semibold uppercase tracking-wider">Namn</Label>
-                <Input
-                  id="name" value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={80} required
-                  className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium"
-                />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} required
+                  className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="desc" className="text-white/60 text-xs font-semibold uppercase tracking-wider">Beskrivning</Label>
-                <Input
-                  id="desc" value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={500}
-                  className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium"
-                />
+                <Input id="desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500}
+                  className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium" />
               </div>
               <Button type="submit" disabled={create.isPending} className="h-10 btn-glow">
                 {create.isPending ? "Skapar…" : "Skapa"}
@@ -101,7 +105,7 @@ function ProgramsPage() {
           </div>
         )}
 
-        {/* PPL Seed card — only shown when no programs */}
+        {/* PPL Seed card */}
         {programs.length === 0 && (
           <div className="card-3d rounded-3xl p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -122,16 +126,11 @@ function ProgramsPage() {
                 </div>
               ))}
             </div>
-            <Button
-              onClick={() => seed.mutate()}
-              disabled={seed.isPending}
-              className="w-full h-11 rounded-xl btn-glow font-semibold"
-            >
-              {seed.isPending ? (
-                <><div className="size-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin mr-2" />Skapar program…</>
-              ) : (
-                <><Dumbbell className="size-4 mr-2" />Skapa Push / Pull / Legs™</>
-              )}
+            <Button onClick={() => seed.mutate()} disabled={seed.isPending} className="w-full h-11 rounded-xl btn-glow font-semibold">
+              {seed.isPending
+                ? <><div className="size-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin mr-2" />Skapar program…</>
+                : <><Dumbbell className="size-4 mr-2" />Skapa Push / Pull / Legs</>
+              }
             </Button>
           </div>
         )}
@@ -140,23 +139,50 @@ function ProgramsPage() {
         {programs.length > 0 && (
           <div className="space-y-2">
             {programs.map((p: any) => (
-              <Link
-                key={p.id}
-                to="/trainer/programs/$programId"
-                params={{ programId: p.id }}
-                className="card-3d rounded-2xl flex items-center justify-between p-4 group hover:border-white/20 transition-all"
-              >
-                <div>
-                  <div className="font-semibold text-white">{p.name}</div>
-                  {p.description && <div className="text-xs text-white/40 mt-0.5">{p.description}</div>}
-                </div>
-                <ArrowRight className="size-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-0.5 transition-all" />
-              </Link>
+              <div key={p.id} className="card-3d rounded-2xl flex items-center group hover:border-white/20 transition-all overflow-hidden">
+                <Link
+                  to="/trainer/programs/$programId"
+                  params={{ programId: p.id }}
+                  className="flex-1 flex items-center justify-between p-4"
+                >
+                  <div>
+                    <div className="font-semibold text-white">{p.name}</div>
+                    {p.description && <div className="text-xs text-white/40 mt-0.5">{p.description}</div>}
+                  </div>
+                  <ArrowRight className="size-4 text-white/20 group-hover:text-white/60 group-hover:translate-x-0.5 transition-all" />
+                </Link>
+
+                {/* Delete button */}
+                {confirmId === p.id ? (
+                  <div className="flex items-center gap-2 pr-3 shrink-0">
+                    <button
+                      onClick={() => del.mutate(p.id)}
+                      disabled={del.isPending}
+                      className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all"
+                    >
+                      {del.isPending ? "Raderar…" : "Bekräfta"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="px-3 py-1.5 rounded-lg text-white/30 text-xs hover:text-white/60 transition-colors"
+                    >
+                      Avbryt
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.preventDefault(); setConfirmId(p.id); }}
+                    className="p-3 mr-1 text-white/20 hover:text-red-400 transition-colors shrink-0"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}
 
-        {/* Also show seed button as secondary option when programs exist */}
+        {/* Add PPL when programs exist */}
         {programs.length > 0 && (
           <button
             onClick={() => seed.mutate()}
@@ -170,6 +196,8 @@ function ProgramsPage() {
           </button>
         )}
       </div>
+
+      {/* Confirm delete overlay — just in case confirmId is set */}
     </AppShell>
   );
 }

@@ -381,6 +381,27 @@ export const createProgram = createServerFn({ method: "POST" })
     return row;
   });
 
+export const deleteProgram = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ programId: z.string().uuid() }))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: prog } = await supabase
+      .from("programs")
+      .select("trainer_id")
+      .eq("id", data.programId)
+      .maybeSingle();
+    if (prog?.trainer_id !== userId) throw new Error("Forbidden");
+    // cascade: delete exercises + assignments first
+    await Promise.all([
+      supabase.from("program_exercises").delete().eq("program_id", data.programId),
+      supabase.from("program_assignments").delete().eq("program_id", data.programId),
+    ]);
+    const { error } = await supabase.from("programs").delete().eq("id", data.programId);
+    if (error) dbError(error);
+    return { ok: true };
+  });
+
 export const addProgramExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -518,7 +539,6 @@ const PPL_TEMPLATES = [
 ];
 
 async function getOrCreateExercise(supabase: any, name: string, userId: string): Promise<string> {
-  // Check trainer's own exercises first
   const { data: own } = await supabase
     .from("exercises")
     .select("id")
@@ -526,8 +546,6 @@ async function getOrCreateExercise(supabase: any, name: string, userId: string):
     .ilike("name", name)
     .maybeSingle();
   if (own?.id) return own.id;
-
-  // Try global_exercises
   const { data: global } = await (supabase as any)
     .from("global_exercises")
     .select("id, name")
@@ -535,7 +553,6 @@ async function getOrCreateExercise(supabase: any, name: string, userId: string):
     .limit(1)
     .maybeSingle();
   const resolvedName = global?.name ?? name;
-
   const { data: created, error } = await supabase
     .from("exercises")
     .insert({ name: resolvedName, notes: "", trainer_id: userId })

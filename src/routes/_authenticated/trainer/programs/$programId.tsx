@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -6,6 +6,7 @@ import { AppShell } from "@/components/app-shell";
 import {
   addProgramExercise,
   assignProgram,
+  deleteProgram,
   getProgram,
   listClients,
   listExercises,
@@ -16,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Check } from "lucide-react";
+import { Trash2, Check, ChevronLeft, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/trainer/programs/$programId")({
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/_authenticated/trainer/programs/$programI
 
 function ProgramDetail() {
   const { programId } = Route.useParams();
+  const nav = useNavigate();
   const qc = useQueryClient();
   const fGet = useServerFn(getProgram);
   const fEx = useServerFn(listExercises);
@@ -33,6 +35,7 @@ function ProgramDetail() {
   const fRem = useServerFn(removeProgramExercise);
   const fAss = useServerFn(assignProgram);
   const fUna = useServerFn(unassignProgram);
+  const fDel = useServerFn(deleteProgram);
 
   const prog = useQuery({ queryKey: ["program", programId], queryFn: () => fGet({ data: { programId } }) });
   const exs = useQuery({ queryKey: ["exercises"], queryFn: () => fEx() });
@@ -43,11 +46,21 @@ function ProgramDetail() {
   const rem = useMutation({ mutationFn: fRem, onSuccess: invalidate });
   const ass = useMutation({ mutationFn: fAss, onSuccess: () => { invalidate(); toast.success("Tilldelat"); } });
   const una = useMutation({ mutationFn: fUna, onSuccess: invalidate });
+  const del = useMutation({
+    mutationFn: () => fDel({ data: { programId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["programs"] });
+      toast.success("Program raderat");
+      nav({ to: "/trainer/programs" });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
+  });
 
   const [exerciseId, setExerciseId] = useState("");
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
   const [rest, setRest] = useState(90);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const items = prog.data?.items ?? [];
   const assignedIds = new Set((prog.data?.assignments ?? []).map((a: any) => a.client_id));
@@ -55,10 +68,40 @@ function ProgramDetail() {
 
   return (
     <AppShell title={prog.data?.program?.name ?? "Program"}>
-      <Link to="/trainer/programs" className="text-sm text-muted-foreground hover:text-foreground">← Tillbaka</Link>
+      {/* Back + delete header */}
+      <div className="flex items-center justify-between mb-6">
+        <Link to="/trainer/programs" className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors">
+          <ChevronLeft className="size-4" /> Tillbaka
+        </Link>
 
-      <div className="mt-6 bg-card border border-border rounded-xl p-5">
-        <h2 className="font-medium mb-3">Lägg till övning</h2>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-1.5 text-sm text-white/30 hover:text-red-400 transition-colors"
+          >
+            <Trash2 className="size-4" /> Radera program
+          </button>
+        ) : (
+          <div className="flex items-center gap-3 glass rounded-xl px-4 py-2">
+            <AlertTriangle className="size-4 text-red-400 shrink-0" />
+            <span className="text-sm text-white/60">Radera?</span>
+            <button
+              onClick={() => del.mutate()}
+              disabled={del.isPending}
+              className="px-3 py-1 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/30 transition-all"
+            >
+              {del.isPending ? "Raderar…" : "Ja, radera"}
+            </button>
+            <button onClick={() => setConfirmDelete(false)} className="text-white/30 text-xs hover:text-white/60">
+              Avbryt
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Add exercise */}
+      <div className="glass rounded-2xl p-5 mb-6">
+        <h2 className="font-semibold text-white mb-4">Lägg till övning</h2>
         <form
           className="grid sm:grid-cols-[2fr_repeat(3,1fr)_auto] gap-3 items-end"
           onSubmit={(e) => {
@@ -68,69 +111,88 @@ function ProgramDetail() {
           }}
         >
           <div className="space-y-1.5">
-            <Label>Övning</Label>
+            <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Övning</Label>
             <Select value={exerciseId} onValueChange={setExerciseId}>
-              <SelectTrigger><SelectValue placeholder="Välj…" /></SelectTrigger>
-              <SelectContent>
+              <SelectTrigger className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10">
+                <SelectValue placeholder="Välj…" />
+              </SelectTrigger>
+              <SelectContent className="bg-[oklch(0.12_0.03_265)] border-white/10 text-white">
                 {(exs.data ?? []).map((e: any) => (
-                  <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                  <SelectItem key={e.id} value={e.id} className="focus:bg-white/8 focus:text-white">{e.name}</SelectItem>
                 ))}
-
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Set</Label>
-            <Input type="number" min={1} max={30} value={sets} onChange={(e) => setSets(+e.target.value)} />
+            <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Set</Label>
+            <Input type="number" min={1} max={30} value={sets} onChange={(e) => setSets(+e.target.value)}
+              className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10" />
           </div>
           <div className="space-y-1.5">
-            <Label>Reps</Label>
-            <Input type="number" min={1} max={100} value={reps} onChange={(e) => setReps(+e.target.value)} />
+            <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Reps</Label>
+            <Input type="number" min={1} max={100} value={reps} onChange={(e) => setReps(+e.target.value)}
+              className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10" />
           </div>
           <div className="space-y-1.5">
-            <Label>Vila (s)</Label>
-            <Input type="number" min={0} max={600} value={rest} onChange={(e) => setRest(+e.target.value)} />
+            <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider">Vila (s)</Label>
+            <Input type="number" min={0} max={600} value={rest} onChange={(e) => setRest(+e.target.value)}
+              className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10" />
           </div>
-          <Button type="submit">Lägg till</Button>
+          <Button type="submit" className="h-10 btn-glow">Lägg till</Button>
         </form>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-xl divide-y divide-border">
+      {/* Exercise list */}
+      <div className="space-y-2 mb-8">
         {items.map((it: any) => (
-          <div key={it.id} className="flex items-center justify-between p-4">
+          <div key={it.id} className="card-3d rounded-2xl flex items-center justify-between p-4">
             <div>
-              <div className="font-medium">{it.exercises?.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {it.target_sets} × {it.target_reps} · vila {it.rest_seconds}s
+              <div className="font-semibold text-white">{it.exercises?.name}</div>
+              <div className="text-xs text-white/40 mt-0.5">
+                {it.target_sets} set × {it.target_reps} reps &middot; vila {it.rest_seconds}s
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => rem.mutate({ data: { id: it.id } })}>
-              <Trash2 className="size-4 text-muted-foreground" />
-            </Button>
+            <button
+              onClick={() => rem.mutate({ data: { id: it.id } })}
+              className="p-2 text-white/20 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+            >
+              <Trash2 className="size-4" />
+            </button>
           </div>
         ))}
-        {items.length === 0 && <div className="p-6 text-sm text-muted-foreground">Inga övningar än.</div>}
+        {items.length === 0 && (
+          <div className="glass rounded-2xl p-8 text-center text-white/30 text-sm">
+            Inga övningar än. Lägg till en övning ovan.
+          </div>
+        )}
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-sm font-medium text-muted-foreground mb-3">Tilldela till kunder</h2>
-        <div className="bg-card border border-border rounded-xl divide-y divide-border">
-          {myClients.length === 0 && <div className="p-6 text-sm text-muted-foreground">Inga kunder ännu.</div>}
+      {/* Assign to clients */}
+      <div>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-white/30 mb-3">Tilldela till kunder</h2>
+        <div className="space-y-2">
+          {myClients.length === 0 && (
+            <div className="glass rounded-2xl p-6 text-center text-white/30 text-sm">Inga kunder ännu.</div>
+          )}
           {myClients.map((c) => {
             const isAssigned = assignedIds.has(c.id);
             return (
-              <div key={c.id} className="flex items-center justify-between p-4">
-                <div className="font-medium">{c.display_name || "Namnlös"}</div>
+              <div key={c.id} className="card-3d rounded-2xl flex items-center justify-between p-4">
+                <div className="font-semibold text-white">{c.display_name || "Namnlös"}</div>
                 <Button
                   size="sm"
                   variant={isAssigned ? "secondary" : "outline"}
+                  className={isAssigned
+                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25"
+                    : "border-white/10 text-white/50 hover:text-white hover:bg-white/8"
+                  }
                   onClick={() =>
                     isAssigned
                       ? una.mutate({ data: { programId, clientId: c.id } })
                       : ass.mutate({ data: { programId, clientId: c.id } })
                   }
                 >
-                  {isAssigned ? (<><Check className="size-3.5" /> Tilldelad</>) : "Tilldela"}
+                  {isAssigned ? (<><Check className="size-3.5 mr-1" /> Tilldelad</>) : "Tilldela"}
                 </Button>
               </div>
             );
