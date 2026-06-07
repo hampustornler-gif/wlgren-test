@@ -3,13 +3,12 @@ import { ReactNode, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dumbbell, LineChart, Users, ListChecks, User2,
-  LogOut, Ruler, Shield, RefreshCw, Menu, X
+  LogOut, Ruler, Shield, Menu, X
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getMe } from "@/lib/app.functions";
-import { toast } from "sonner";
 
 export function AppShell({ children, title }: { children: ReactNode; title?: string }) {
   const router = useRouter();
@@ -23,7 +22,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     refetchInterval: 3000,
     refetchIntervalInBackground: true,
   });
-  const [refreshing, setRefreshing] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const closeDrawer = () => setDrawerOpen(false);
@@ -34,21 +32,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     qc.clear();
     await supabase.auth.signOut();
     router.navigate({ to: "/auth", replace: true });
-  };
-
-  const onRefreshRoles = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      await supabase.auth.refreshSession();
-      await qc.invalidateQueries();
-      await router.invalidate();
-      toast.success("Beh\u00f6righeter uppdaterade");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Kunde inte uppdatera");
-    } finally {
-      setRefreshing(false);
-    }
   };
 
   const adminSection = {
@@ -85,7 +68,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     ? [trainerSection, clientSection]
     : [clientSection];
 
-  // Primary section items shown directly in bottom bar
   const primaryItems = meLoading
     ? []
     : me?.isAdmin
@@ -94,9 +76,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     ? trainerSection.items
     : clientSection.items;
 
-  // Show "More" button only if there are multiple sections
   const hasMoreSections = sections.length > 1;
-  // Bottom bar shows max 4 primary items + maybe a "More" slot
   const bottomNavItems = hasMoreSections ? primaryItems.slice(0, 3) : primaryItems;
 
   const roleBadgeClass = me?.isAdmin
@@ -161,14 +141,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             )}
           </div>
           <button
-            onClick={onRefreshRoles}
-            disabled={refreshing}
-            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 disabled:opacity-60"
-          >
-            <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Uppdaterar\u2026" : "Uppdatera beh\u00f6righeter"}
-          </button>
-          <button
             onClick={onSignOut}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60"
           >
@@ -183,14 +155,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between sticky top-0 z-10">
           <h1 className="text-base font-semibold tracking-tight truncate">{title ?? ""}</h1>
           <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
-            <button
-              onClick={onRefreshRoles}
-              disabled={refreshing}
-              aria-label="Uppdatera beh\u00f6righeter"
-              className="p-2 rounded-md hover:bg-accent/60 disabled:opacity-60 md:hidden"
-            >
-              <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
-            </button>
             <User2 className="size-4 shrink-0" />
             <span className="hidden sm:inline truncate max-w-[120px]">
               {meLoading ? "Laddar\u2026" : (me?.profile?.display_name ?? "Konto")}
@@ -227,8 +191,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
               <span className="leading-none truncate w-full text-center">{n.label}</span>
             </Link>
           ))}
-
-          {/* "More" button — opens full nav drawer */}
           {hasMoreSections && (
             <button
               onClick={() => setDrawerOpen(true)}
@@ -241,20 +203,17 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </nav>
       </div>
 
-      {/* Mobile full-nav drawer overlay */}
+      {/* Mobile full-nav drawer */}
       {drawerOpen && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-20 bg-black/50 md:hidden"
             onClick={closeDrawer}
           />
-          {/* Drawer */}
           <div
             className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-background rounded-t-2xl shadow-xl flex flex-col"
             style={{ paddingBottom: "env(safe-area-inset-bottom)", maxHeight: "80vh" }}
           >
-            {/* Drag handle */}
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-semibold">
@@ -296,16 +255,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
                   </div>
                 </div>
               ))}
-
               <div className="border-t border-border pt-3 flex flex-col gap-0.5">
-                <button
-                  onClick={onRefreshRoles}
-                  disabled={refreshing}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 disabled:opacity-60"
-                >
-                  <RefreshCw className={`size-5 ${refreshing ? "animate-spin" : ""}`} />
-                  {refreshing ? "Uppdaterar\u2026" : "Uppdatera beh\u00f6righeter"}
-                </button>
                 <button
                   onClick={onSignOut}
                   className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10"
