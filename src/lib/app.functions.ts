@@ -476,6 +476,107 @@ export const unassignProgram = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- SEED: PPL TEMPLATE PROGRAMS ----------
+const PPL_TEMPLATES = [
+  {
+    name: "Push (Basic)",
+    description: "Bröst, axlar och triceps. Kompound övningar för styrka och massa.",
+    exercises: [
+      { name: "Barbell Bench Press",        sets: 4, reps: 8,  rest: 120 },
+      { name: "Incline Dumbbell Press",      sets: 3, reps: 10, rest: 90  },
+      { name: "Overhead Press",              sets: 3, reps: 8,  rest: 120 },
+      { name: "Lateral Raise",               sets: 3, reps: 15, rest: 60  },
+      { name: "Triceps Pushdown",            sets: 3, reps: 12, rest: 60  },
+      { name: "Overhead Triceps Extension",  sets: 3, reps: 12, rest: 60  },
+    ],
+  },
+  {
+    name: "Pull (Basic)",
+    description: "Rygg och biceps. Fokus på höjd och tjocklek i ryggen.",
+    exercises: [
+      { name: "Deadlift",                   sets: 4, reps: 5,  rest: 180 },
+      { name: "Pull-Ups",                   sets: 3, reps: 8,  rest: 120 },
+      { name: "Barbell Row",                sets: 4, reps: 8,  rest: 120 },
+      { name: "Cable Row",                  sets: 3, reps: 12, rest: 90  },
+      { name: "Face Pull",                  sets: 3, reps: 15, rest: 60  },
+      { name: "Barbell Curl",               sets: 3, reps: 10, rest: 60  },
+      { name: "Hammer Curl",                sets: 3, reps: 12, rest: 60  },
+    ],
+  },
+  {
+    name: "Legs (Basic)",
+    description: "Quadriceps, hamstrings, säten och vader. Benfokus.",
+    exercises: [
+      { name: "Barbell Squat",              sets: 4, reps: 8,  rest: 180 },
+      { name: "Romanian Deadlift",          sets: 3, reps: 10, rest: 120 },
+      { name: "Leg Press",                  sets: 3, reps: 12, rest: 90  },
+      { name: "Leg Curl",                   sets: 3, reps: 12, rest: 90  },
+      { name: "Walking Lunge",              sets: 3, reps: 12, rest: 90  },
+      { name: "Calf Raise",                 sets: 4, reps: 15, rest: 60  },
+    ],
+  },
+];
+
+async function getOrCreateExercise(supabase: any, name: string, userId: string): Promise<string> {
+  // Check trainer's own exercises first
+  const { data: own } = await supabase
+    .from("exercises")
+    .select("id")
+    .eq("trainer_id", userId)
+    .ilike("name", name)
+    .maybeSingle();
+  if (own?.id) return own.id;
+
+  // Try global_exercises
+  const { data: global } = await (supabase as any)
+    .from("global_exercises")
+    .select("id, name")
+    .ilike("name", `%${name}%`)
+    .limit(1)
+    .maybeSingle();
+  const resolvedName = global?.name ?? name;
+
+  const { data: created, error } = await supabase
+    .from("exercises")
+    .insert({ name: resolvedName, notes: "", trainer_id: userId })
+    .select("id")
+    .single();
+  if (error) dbError(error);
+  return created.id;
+}
+
+export const seedPPLPrograms = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertTrainer(supabase, userId);
+    const created: string[] = [];
+    for (const template of PPL_TEMPLATES) {
+      const { data: prog, error: pErr } = await supabase
+        .from("programs")
+        .insert({ name: template.name, description: template.description, trainer_id: userId })
+        .select()
+        .single();
+      if (pErr) dbError(pErr);
+      for (let i = 0; i < template.exercises.length; i++) {
+        const ex = template.exercises[i];
+        const exId = await getOrCreateExercise(supabase, ex.name, userId);
+        const { error: eErr } = await supabase.from("program_exercises").insert({
+          program_id: prog.id,
+          exercise_id: exId,
+          order_index: i,
+          target_sets: ex.sets,
+          target_reps: ex.reps,
+          rest_seconds: ex.rest,
+          note: "",
+        });
+        if (eErr) dbError(eErr);
+      }
+      created.push(template.name);
+    }
+    return { ok: true, created };
+  });
+
 // ---------- CLIENT: PROGRAMS / SESSIONS ----------
 export const myPrograms = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
