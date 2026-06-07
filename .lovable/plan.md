@@ -1,47 +1,38 @@
+## Plan: Importera free-exercise-db
 
-## Mål
-Göra `/trainer/clients` till ett komplett verktyg för tränaren att hitta, bjuda in och hantera sina klienter.
+Hämtar ~870 övningar från `yuhonas/free-exercise-db` (MIT-licens) och fyller `global_exercises`-tabellen som Övningsbiblioteket redan läser från.
 
-## 1. Sök & filter
-- Sökruta (matchar `display_name`, case-insensitive).
-- Filterflikar: **Alla / Mina klienter / Otilldelade**.
-- Tillstånd sparas i URL via `validateSearch` (`q`, `tab`) så det överlever refresh och delas via länk.
+### 1. Databas-migration
+Skapa tabellen `public.global_exercises`:
 
-## 2. Mer info i listan
-För varje klient visas:
-- Namn
-- Senaste pass (datum eller "Inga pass")
-- Antal tilldelade program
-- Senaste vikt från `body_measurements` (om finns)
+| kolumn | typ |
+|---|---|
+| id | text PRIMARY KEY (källans slug, t.ex. `Barbell_Squat`) |
+| name | text |
+| force | text (push/pull/static) |
+| level | text (beginner/intermediate/expert) |
+| mechanic | text |
+| equipment | text |
+| category | text |
+| primary_muscle | text (första posten i `primaryMuscles`) |
+| secondary_muscles | text[] |
+| instructions | text (joinad med radbrytning) |
+| image_url | text |
+| image_url_2 | text |
 
-Implementeras genom att utöka `listClients` server-funktionen att aggregera:
-- `workout_sessions` (senaste `started_at` per klient)
-- `program_assignments` (antal per klient)
-- `body_measurements` (senaste `weight_kg` per klient)
+Behörigheter: `GRANT SELECT TO authenticated, anon` (publik referensdata, ingen användarkoppling). RLS av — det är statisk read-only katalog.
 
-## 3. Hantera klient (frikoppla)
-- Ny knapp "Ta bort" på varje "Mina klienter"-rad → bekräftelsedialog → kallar ny serverfn `releaseClient({ clientId })` som sätter `profiles.trainer_id = null` (kontroll: nuvarande tränare måste äga klienten).
-- Klienten finns kvar i systemet men hamnar bland "Otilldelade".
+### 2. Dataimport
+Hämtar `dist/exercises.json` från GitHub raw, mappar fälten och bygger bild-URL:er som:
 
-## 4. Bjuda in klient via e-post
-- "Bjud in"-knapp överst → dialog med fält **E-post** + **Namn** (valfritt).
-- Skapar en post i ny tabell `client_invites` (token, trainer_id, email, expires_at, accepted_at).
-- Skickar ett mejl via Lovable Emails med länk `/invite/$token`.
-- Inbjudningssidan visar tränarens namn, ber besökaren registrera sig / logga in, och kopplar automatiskt `profiles.trainer_id` till den tränare som bjudit in.
-- Förutsätter att e-postdomän är uppsatt — om inte visar jag setup-dialogen först.
+```
+https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/{image_path}
+```
 
-## Tekniska detaljer
-- **DB-migration** (ny tabell):
-  ```text
-  client_invites(id, trainer_id, email, token, name, expires_at, accepted_at, created_at)
-  ```
-  RLS: tränare ser/skapar sina egna; serviceroll används vid acceptans.
-- **Server-funktioner** (`src/lib/app.functions.ts`): utöka `listClients`, ny `releaseClient`, `createClientInvite`, `acceptClientInvite`, `getInvite`.
-- **Email-mall**: scaffoldas via `email_domain--scaffold_transactional_email` (klientinbjudan).
-- **Ruter**:
-  - `/trainer/clients/` – uppgraderad lista (search params för q/tab).
-  - `/invite/$token` – publik landningssida.
+Inga bilder hostas hos oss — direkt-länk till GitHub. Insättning sker batchvis (~50/gång) via insert-verktyget.
 
-## Out of scope
-- Direktmeddelanden till klient.
-- Återanvändbara/permanenta inbjudningslänkar (varje invite är unik och engångs).
+### 3. Frontend
+Inget kodjobb behövs — `src/routes/_authenticated/trainer/exercises/index.tsx` läser redan rätt fält (`primary_muscle`, `level`, `equipment`, `image_url`, `image_url_2`, `instructions`). `(supabase as any)`-casten kan tas bort efter att types regenereras.
+
+### Notering
+Licens MIT — fri användning, attribution i README rekommenderas (lägger till en kort kreditrad i Övningsbiblioteket).

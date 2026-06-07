@@ -110,6 +110,54 @@ export type Database = {
         }
         Relationships: []
       }
+      global_exercises: {
+        Row: {
+          category: string | null
+          created_at: string
+          equipment: string | null
+          force: string | null
+          id: string
+          image_url: string | null
+          image_url_2: string | null
+          instructions: string | null
+          level: string | null
+          mechanic: string | null
+          name: string
+          primary_muscle: string | null
+          secondary_muscles: string[] | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          equipment?: string | null
+          force?: string | null
+          id: string
+          image_url?: string | null
+          image_url_2?: string | null
+          instructions?: string | null
+          level?: string | null
+          mechanic?: string | null
+          name: string
+          primary_muscle?: string | null
+          secondary_muscles?: string[] | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          equipment?: string | null
+          force?: string | null
+          id?: string
+          image_url?: string | null
+          image_url_2?: string | null
+          instructions?: string | null
+          level?: string | null
+          mechanic?: string | null
+          name?: string
+          primary_muscle?: string | null
+          secondary_muscles?: string[] | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
