@@ -341,11 +341,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      client_has_program: {
+        Args: { _program_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_program_trainer: {
+        Args: { _program_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_trainer_of_client: {
+        Args: { _client_id: string; _user_id: string }
         Returns: boolean
       }
     }
