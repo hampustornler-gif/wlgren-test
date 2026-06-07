@@ -366,7 +366,7 @@ export const addProgramExercise = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       programId: z.string().uuid(),
-      exerciseId: z.string().uuid(),
+      exerciseId: z.string().min(1),
       target_sets: nz(3, 1, 30),
       target_reps: nz(10, 1, 100),
       rest_seconds: nz(90, 0, 1200),
@@ -374,17 +374,44 @@ export const addProgramExercise = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ context, data }) => {
-    const { supabase } = context;
-    const { data: existing } = await supabase
+    const { supabase, userId } = context;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.exerciseId);
+    let exerciseUuid = data.exerciseId;
+    if (!isUuid) {
+      const { data: ge } = await (supabase as any)
+        .from("global_exercises")
+        .select("name")
+        .eq("id", data.exerciseId)
+        .maybeSingle();
+      if (!ge?.name) throw new Error("Övning finns inte");
+      const { data: existing } = await supabase
+        .from("exercises")
+        .select("id")
+        .eq("trainer_id", userId)
+        .eq("name", ge.name)
+        .maybeSingle();
+      if (existing?.id) {
+        exerciseUuid = existing.id;
+      } else {
+        const { data: created, error: cErr } = await supabase
+          .from("exercises")
+          .insert({ name: ge.name, notes: "", trainer_id: userId })
+          .select("id")
+          .single();
+        if (cErr) throw cErr;
+        exerciseUuid = created.id;
+      }
+    }
+    const { data: prev } = await supabase
       .from("program_exercises")
       .select("order_index")
       .eq("program_id", data.programId)
       .order("order_index", { ascending: false })
       .limit(1);
-    const nextOrder = (existing?.[0]?.order_index ?? -1) + 1;
+    const nextOrder = (prev?.[0]?.order_index ?? -1) + 1;
     const { error } = await supabase.from("program_exercises").insert({
       program_id: data.programId,
-      exercise_id: data.exerciseId,
+      exercise_id: exerciseUuid,
       order_index: nextOrder,
       target_sets: data.target_sets,
       target_reps: data.target_reps,
@@ -394,6 +421,7 @@ export const addProgramExercise = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
 
 export const removeProgramExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
