@@ -381,6 +381,31 @@ export const createProgram = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateProgram = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      programId: z.string().uuid(),
+      name: z.string().trim().min(1).max(80),
+      description: z.string().max(500).optional(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: prog } = await supabase
+      .from("programs")
+      .select("trainer_id")
+      .eq("id", data.programId)
+      .maybeSingle();
+    if (prog?.trainer_id !== userId) throw new Error("Forbidden");
+    const { error } = await supabase
+      .from("programs")
+      .update({ name: data.name, description: data.description ?? "" })
+      .eq("id", data.programId);
+    if (error) dbError(error);
+    return { ok: true };
+  });
+
 export const deleteProgram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(z.object({ programId: z.string().uuid() }))
@@ -392,7 +417,6 @@ export const deleteProgram = createServerFn({ method: "POST" })
       .eq("id", data.programId)
       .maybeSingle();
     if (prog?.trainer_id !== userId) throw new Error("Forbidden");
-    // cascade: delete exercises + assignments first
     await Promise.all([
       supabase.from("program_exercises").delete().eq("program_id", data.programId),
       supabase.from("program_assignments").delete().eq("program_id", data.programId),

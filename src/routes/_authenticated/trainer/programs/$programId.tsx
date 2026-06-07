@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import {
   addProgramExercise,
@@ -12,12 +12,13 @@ import {
   listExercises,
   removeProgramExercise,
   unassignProgram,
+  updateProgram,
 } from "@/lib/app.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Check, ChevronLeft, AlertTriangle } from "lucide-react";
+import { Trash2, Check, ChevronLeft, AlertTriangle, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/trainer/programs/$programId")({
@@ -36,6 +37,7 @@ function ProgramDetail() {
   const fAss = useServerFn(assignProgram);
   const fUna = useServerFn(unassignProgram);
   const fDel = useServerFn(deleteProgram);
+  const fUpd = useServerFn(updateProgram);
 
   const prog = useQuery({ queryKey: ["program", programId], queryFn: () => fGet({ data: { programId } }) });
   const exs = useQuery({ queryKey: ["exercises"], queryFn: () => fEx() });
@@ -52,6 +54,30 @@ function ProgramDetail() {
       qc.invalidateQueries({ queryKey: ["programs"] });
       toast.success("Program raderat");
       nav({ to: "/trainer/programs" });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
+  });
+
+  // --- Edit state ---
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+
+  // Sync fields when program loads
+  useEffect(() => {
+    if (prog.data?.program && !editing) {
+      setEditName(prog.data.program.name ?? "");
+      setEditDesc(prog.data.program.description ?? "");
+    }
+  }, [prog.data?.program]);
+
+  const upd = useMutation({
+    mutationFn: () => fUpd({ data: { programId, name: editName, description: editDesc } }),
+    onSuccess: () => {
+      invalidate();
+      qc.invalidateQueries({ queryKey: ["programs"] });
+      toast.success("Sparat");
+      setEditing(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Misslyckades"),
   });
@@ -96,6 +122,79 @@ function ProgramDetail() {
               Avbryt
             </button>
           </div>
+        )}
+      </div>
+
+      {/* === EDIT NAME & DESCRIPTION === */}
+      <div className="glass rounded-2xl p-5 mb-6">
+        {!editing ? (
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-xl font-bold text-white truncate">{prog.data?.program?.name}</h2>
+              {prog.data?.program?.description && (
+                <p className="text-sm text-white/40 mt-1">{prog.data.program.description}</p>
+              )}
+              {!prog.data?.program?.description && (
+                <p className="text-sm text-white/20 mt-1 italic">Ingen beskrivning</p>
+              )}
+            </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-white/30 hover:text-white/70 glass rounded-lg px-3 py-1.5 transition-all"
+            >
+              <Pencil className="size-3.5" /> Redigera
+            </button>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (!editName.trim()) return; upd.mutate(); }}
+            className="space-y-3"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-bold uppercase tracking-widest text-white/30">Redigera program</span>
+              <button
+                type="button"
+                onClick={() => { setEditing(false); setEditName(prog.data?.program?.name ?? ""); setEditDesc(prog.data?.program?.description ?? ""); }}
+                className="text-white/30 hover:text-white/60 transition-colors"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/50 text-xs font-semibold uppercase tracking-wider">Namn</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                maxLength={80}
+                required
+                autoFocus
+                className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-white/50 text-xs font-semibold uppercase tracking-wider">Beskrivning</Label>
+              <Input
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                maxLength={500}
+                placeholder="Valfri beskrivning…"
+                className="bg-white/[0.06] border-white/10 text-white rounded-xl h-10 input-premium placeholder:text-white/20"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" disabled={upd.isPending} className="btn-glow h-9 text-sm">
+                {upd.isPending ? "Sparar…" : "Spara"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => { setEditing(false); setEditName(prog.data?.program?.name ?? ""); setEditDesc(prog.data?.program?.description ?? ""); }}
+                className="h-9 text-sm text-white/40 hover:text-white"
+              >
+                Avbryt
+              </Button>
+            </div>
+          </form>
         )}
       </div>
 
