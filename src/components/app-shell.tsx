@@ -44,64 +44,101 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     }
   };
 
-  const adminNav = [
-    { to: "/admin", label: "Översikt", icon: LineChart },
-    { to: "/admin/users", label: "Användare", icon: Shield },
-    { to: "/trainer/clients", label: "Kunder", icon: Users },
-    { to: "/trainer/programs", label: "Program", icon: ListChecks },
-  ];
-  const trainerNav = [
-    { to: "/trainer", label: "Översikt", icon: LineChart },
-    { to: "/trainer/clients", label: "Kunder", icon: Users },
-    { to: "/trainer/programs", label: "Program", icon: ListChecks },
-    { to: "/trainer/exercises", label: "Övningar", icon: Dumbbell },
-  ];
-  const clientNav = [
-    { to: "/app", label: "Idag", icon: Dumbbell },
-    { to: "/app/history", label: "Historik", icon: ListChecks },
-    { to: "/app/progress", label: "Utveckling", icon: LineChart },
-    { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
-  ];
-  const nav = meLoading ? [] : me?.isAdmin ? adminNav : me?.isTrainer ? trainerNav : clientNav;
-  const roleLabel = meLoading ? "Laddar…" : me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Kund";
+  const adminSection = {
+    label: "🛡️ Admin",
+    items: [
+      { to: "/admin", label: "Översikt", icon: LineChart },
+      { to: "/admin/users", label: "Användare", icon: Shield },
+    ],
+  };
+  const trainerSection = {
+    label: "🏃 Tränare",
+    items: [
+      { to: "/trainer", label: "Översikt", icon: LineChart },
+      { to: "/trainer/clients", label: "Kunder", icon: Users },
+      { to: "/trainer/programs", label: "Program", icon: ListChecks },
+      { to: "/trainer/exercises", label: "Övningar", icon: Dumbbell },
+    ],
+  };
+  const clientSection = {
+    label: "💪 Klient",
+    items: [
+      { to: "/app", label: "Idag", icon: Dumbbell },
+      { to: "/app/history", label: "Historik", icon: ListChecks },
+      { to: "/app/progress", label: "Utveckling", icon: LineChart },
+      { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
+    ],
+  };
+
+  // Admin ser alla sektioner, tränare ser tränar + klient, klient ser bara klient
+  const sections = meLoading
+    ? []
+    : me?.isAdmin
+    ? [adminSection, trainerSection, clientSection]
+    : me?.isTrainer
+    ? [trainerSection, clientSection]
+    : [clientSection];
+
+  // Flat nav for mobile bottom bar — use primary section only
+  const mobileNav = meLoading
+    ? []
+    : me?.isAdmin
+    ? adminSection.items
+    : me?.isTrainer
+    ? trainerSection.items
+    : clientSection.items;
+
+  const roleBadgeClass = me?.isAdmin
+    ? "border-violet-500 text-violet-400 bg-violet-500/10"
+    : me?.isTrainer
+    ? "border-blue-500 text-blue-400 bg-blue-500/10"
+    : "border-emerald-500 text-emerald-400 bg-emerald-500/10";
+
+  const roleLabel = meLoading ? "Laddar…" : me?.isAdmin ? "🛡️ Admin" : me?.isTrainer ? "🏃 Tränare" : "💪 Klient";
 
   return (
     <div className="min-h-screen bg-background flex">
-      <aside className="hidden md:flex w-60 shrink-0 border-r border-border flex-col p-5 gap-1 bg-sidebar">
-        <div className="flex items-center gap-2 mb-6 px-2">
+      <aside className="hidden md:flex w-64 shrink-0 border-r border-border flex-col p-4 gap-1 bg-sidebar">
+        <div className="flex items-center gap-2 mb-5 px-2">
           <div className="size-8 rounded-lg bg-primary grid place-items-center text-primary-foreground">
             <Dumbbell className="size-4" />
           </div>
           <div className="font-semibold tracking-tight">Träna</div>
         </div>
-        <nav className="flex flex-col gap-1">
-          {nav.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              activeProps={{ className: "bg-accent text-accent-foreground" }}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition"
-            >
-              <n.icon className="size-4" />
-              {n.label}
-            </Link>
+
+        <nav className="flex flex-col gap-4 flex-1 overflow-y-auto">
+          {sections.map((section) => (
+            <div key={section.label}>
+              {sections.length > 1 && (
+                <div className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                  {section.label}
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5">
+                {section.items.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    activeProps={{ className: "bg-accent text-accent-foreground" }}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition"
+                  >
+                    <n.icon className="size-4" />
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-1 pt-4 border-t border-border">
-          <div className="px-3 py-2 flex flex-col gap-1">
-            <div className="text-xs font-medium text-foreground">{meLoading ? "Laddar konto…" : me?.profile?.display_name ?? "Konto"}</div>
+
+        <div className="flex flex-col gap-1 pt-4 border-t border-border">
+          <div className="px-3 py-2 flex flex-col gap-1.5">
+            <div className="text-xs font-medium text-foreground">
+              {meLoading ? "Laddar konto…" : me?.profile?.display_name ?? "Konto"}
+            </div>
             {!meLoading && (
-              <Badge
-                variant="outline"
-                className={
-                  me?.isAdmin
-                    ? "border-violet-500 text-violet-400 bg-violet-500/10 text-xs w-fit"
-                    : me?.isTrainer
-                    ? "border-blue-500 text-blue-400 bg-blue-500/10 text-xs w-fit"
-                    : "border-emerald-500 text-emerald-400 bg-emerald-500/10 text-xs w-fit"
-                }
-              >
-                {me?.isAdmin ? "🛡️ Admin" : me?.isTrainer ? "🏃 Tränare" : "💪 Klient"}
+              <Badge variant="outline" className={`${roleBadgeClass} text-xs w-fit`}>
+                {roleLabel}
               </Badge>
             )}
           </div>
@@ -125,36 +162,29 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
       <div className="flex-1 flex flex-col min-w-0">
         <header className="border-b border-border bg-background/80 backdrop-blur px-4 md:px-8 h-14 flex items-center justify-between">
           <h1 className="text-base font-semibold tracking-tight">{title ?? ""}</h1>
-          <div className="md:hidden flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <button
               onClick={onRefreshRoles}
               disabled={refreshing}
               aria-label="Uppdatera behörigheter"
-              className="p-1.5 rounded-md hover:bg-accent/60 disabled:opacity-60"
+              className="p-1.5 rounded-md hover:bg-accent/60 disabled:opacity-60 md:hidden"
             >
               <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
             </button>
             <User2 className="size-4" />
-            {meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}
+            <span className="hidden sm:inline">{meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}</span>
             {!meLoading && (
-              <Badge
-                variant="outline"
-                className={
-                  me?.isAdmin
-                    ? "border-violet-500 text-violet-400 bg-violet-500/10 text-xs"
-                    : me?.isTrainer
-                    ? "border-blue-500 text-blue-400 bg-blue-500/10 text-xs"
-                    : "border-emerald-500 text-emerald-400 bg-emerald-500/10 text-xs"
-                }
-              >
-                {me?.isAdmin ? "Admin" : me?.isTrainer ? "Tränare" : "Klient"}
+              <Badge variant="outline" className={`${roleBadgeClass} text-xs`}>
+                {roleLabel}
               </Badge>
             )}
           </div>
         </header>
+
         <main className="p-4 md:p-8 max-w-5xl w-full mx-auto flex-1">{children}</main>
-        <nav className="md:hidden border-t border-border bg-background grid grid-cols-4 sticky bottom-0">
-          {nav.map((n) => (
+
+        <nav className="md:hidden border-t border-border bg-background grid sticky bottom-0" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, 1fr)` }}>
+          {mobileNav.map((n) => (
             <Link
               key={n.to}
               to={n.to}
