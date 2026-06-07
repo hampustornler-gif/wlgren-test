@@ -98,7 +98,7 @@ function ClientsPage() {
   const pendingInvites = (invites ?? []).filter((i) => !i.accepted_at);
 
   const updateSearch = (patch: Partial<{ q: string; tab: "all" | "mine" | "unassigned" }>) => {
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: { q: string; tab: "all" | "mine" | "unassigned" }) => ({ ...prev, ...patch }) });
   };
 
   return (
