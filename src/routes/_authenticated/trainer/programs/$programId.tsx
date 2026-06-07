@@ -72,9 +72,10 @@ function ProgramDetail() {
             <Select value={exerciseId} onValueChange={setExerciseId}>
               <SelectTrigger><SelectValue placeholder="Välj…" /></SelectTrigger>
               <SelectContent>
-                {(exs.data ?? []).map((e) => (
+                {(exs.data ?? []).map((e: any) => (
                   <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                 ))}
+
               </SelectContent>
             </Select>
           </div>
