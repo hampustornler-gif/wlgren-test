@@ -13,6 +13,7 @@ import {
   releaseClient,
   revokeInvite,
 } from "@/lib/app.functions";
+import { buildInviteUrl } from "@/lib/public-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -402,8 +403,7 @@ function Empty({ text }: { text: string }) {
 }
 
 function inviteLink(token: string) {
-  if (typeof window === "undefined") return `/invite/${token}`;
-  return `${window.location.origin}/invite/${token}`;
+  return buildInviteUrl(token);
 }
 
 function formatDate(iso: string) {

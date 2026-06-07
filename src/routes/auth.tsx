@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { buildPublicUrl } from "@/lib/public-url";
 import { Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,7 +40,7 @@ function AuthPage() {
   const pendingInvite = (() => {
     try { return sessionStorage.getItem("pendingInvite"); } catch { return null; }
   })();
-  const inviteRedirect = pendingInvite ? `${window.location.origin}/invite/${pendingInvite}` : window.location.origin;
+  const inviteRedirect = pendingInvite ? buildPublicUrl(`/invite/${pendingInvite}`) : buildPublicUrl("/");
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +61,7 @@ function AuthPage() {
         setMode("login");
       } else if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: buildPublicUrl("/reset-password"),
         });
         if (error) throw error;
         toast.success("Återställningslänk skickad. Kolla din e-post.");
