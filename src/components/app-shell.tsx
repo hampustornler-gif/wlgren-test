@@ -35,28 +35,28 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
   };
 
   const adminSection = {
-    label: "\uD83D\uDEE1\uFE0F Admin",
+    label: "🛡️ Admin",
     items: [
-      { to: "/admin", label: "\u00d6versikt", icon: LineChart },
-      { to: "/admin/users", label: "Anv\u00e4ndare", icon: Shield },
+      { to: "/admin", label: "Översikt", icon: LineChart },
+      { to: "/admin/users", label: "Användare", icon: Shield },
     ],
   };
   const trainerSection = {
-    label: "\uD83C\uDFC3 Tr\u00e4nare",
+    label: "🏃 Tränare",
     items: [
-      { to: "/trainer", label: "\u00d6versikt", icon: LineChart },
+      { to: "/trainer", label: "Översikt", icon: LineChart },
       { to: "/trainer/clients", label: "Kunder", icon: Users },
       { to: "/trainer/programs", label: "Program", icon: ListChecks },
-      { to: "/trainer/exercises", label: "\u00d6vningar", icon: Dumbbell },
+      { to: "/trainer/exercises", label: "Övningar", icon: Dumbbell },
     ],
   };
   const clientSection = {
-    label: "\uD83D\uDCAA Klient",
+    label: "💪 Klient",
     items: [
       { to: "/app", label: "Idag", icon: Dumbbell },
       { to: "/app/history", label: "Historik", icon: ListChecks },
       { to: "/app/progress", label: "Utveckling", icon: LineChart },
-      { to: "/app/measurements", label: "Kroppsm\u00e5tt", icon: Ruler },
+      { to: "/app/measurements", label: "Kroppsmått", icon: Ruler },
     ],
   };
 
@@ -86,12 +86,12 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
     : "border-emerald-500/50 text-emerald-300 bg-emerald-500/15";
 
   const roleLabel = meLoading
-    ? "Laddar\u2026"
+    ? "Laddar…"
     : me?.isAdmin
-    ? "\uD83D\uDEE1\uFE0F Admin"
+    ? "🛡️ Admin"
     : me?.isTrainer
-    ? "\uD83C\uDFC3 Tr\u00e4nare"
-    : "\uD83D\uDCAA Klient";
+    ? "🏃 Tränare"
+    : "💪 Klient";
 
   const totalBottomSlots = hasMoreSections ? bottomNavItems.length + 1 : bottomNavItems.length;
 
@@ -103,7 +103,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           <div className="size-9 rounded-xl bg-primary grid place-items-center text-primary-foreground shadow-lg shadow-primary/30 btn-glow">
             <Dumbbell className="size-4" />
           </div>
-          <div className="font-bold tracking-tight text-base text-foreground">Tr\u00e4na</div>
+          <div className="font-bold tracking-tight text-base text-foreground">Träna</div>
         </div>
         <nav className="flex flex-col gap-5 flex-1 overflow-y-auto">
           {sections.map((section) => (
@@ -132,7 +132,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         <div className="flex flex-col gap-1 pt-4 border-t border-white/[0.06]">
           <div className="px-3 py-2 flex flex-col gap-1.5">
             <div className="text-sm font-semibold text-white">
-              {meLoading ? "Laddar konto\u2026" : me?.profile?.display_name ?? "Konto"}
+              {meLoading ? "Laddar konto…" : me?.profile?.display_name ?? "Konto"}
             </div>
             {!meLoading && (
               <Badge variant="outline" className={`${roleBadgeClass} text-xs w-fit`}>
@@ -157,7 +157,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           <div className="flex items-center gap-2 text-sm shrink-0">
             <User2 className="size-4 shrink-0 text-white/40" />
             <span className="hidden sm:inline truncate max-w-[120px] text-white/60">
-              {meLoading ? "Laddar\u2026" : (me?.profile?.display_name ?? "Konto")}
+              {meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}
             </span>
             {!meLoading && (
               <Badge variant="outline" className={`${roleBadgeClass} text-xs hidden sm:inline-flex`}>
@@ -215,7 +215,6 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             className="fixed bottom-0 left-0 right-0 z-30 md:hidden rounded-t-3xl flex flex-col glass"
             style={{ paddingBottom: "env(safe-area-inset-bottom)", maxHeight: "82vh" }}
           >
-            {/* Handle bar */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
@@ -223,7 +222,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
             <div className="flex items-center justify-between px-5 pt-2 pb-3">
               <div className="flex flex-col gap-1">
                 <span className="text-base font-bold text-white">
-                  {meLoading ? "Laddar\u2026" : (me?.profile?.display_name ?? "Konto")}
+                  {meLoading ? "Laddar…" : (me?.profile?.display_name ?? "Konto")}
                 </span>
                 {!meLoading && (
                   <Badge variant="outline" className={`${roleBadgeClass} text-xs w-fit`}>
