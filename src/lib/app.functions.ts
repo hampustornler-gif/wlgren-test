@@ -10,13 +10,15 @@ function dbError(error: unknown, msg = "Database operation failed"): never {
 }
 
 async function assertTrainer(supabase: any, userId: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", userId)
-    .in("role", ["trainer", "admin"])
-    .maybeSingle();
-  if (!data) throw new Error("Forbidden: trainer role required");
+    .eq("user_id", userId);
+  if (error) dbError(error);
+  const roles = (data ?? []).map((r: any) => r.role);
+  if (!roles.includes("trainer") && !roles.includes("admin")) {
+    throw new Error("Forbidden: trainer role required");
+  }
 }
 
 
