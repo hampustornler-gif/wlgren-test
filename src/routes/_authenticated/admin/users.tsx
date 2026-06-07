@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   assignClientToTrainer,
+  getMe,
   listAllUsers,
   setUserRole,
 } from "@/lib/app.functions";
@@ -27,14 +28,39 @@ const ALL_ROLES: Role[] = ["admin", "trainer", "client"];
 
 function AdminUsers() {
   const qc = useQueryClient();
+  const fetchMe = useServerFn(getMe);
   const fetchUsers = useServerFn(listAllUsers);
   const setRole = useServerFn(setUserRole);
   const assignTrainer = useServerFn(assignClientToTrainer);
+  const { data: me, isLoading: meLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => fetchMe(),
+    refetchOnMount: "always",
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
+  });
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: () => fetchUsers(),
+    enabled: me?.isAdmin === true,
   });
+
+  if (meLoading) {
+    return (
+      <AppShell title="Användare">
+        <p className="text-sm text-muted-foreground">Kontrollerar admin-behörighet…</p>
+      </AppShell>
+    );
+  }
+
+  if (!me?.isAdmin) {
+    return (
+      <AppShell title="Användare">
+        <p className="text-sm text-muted-foreground">Du saknar admin-behörighet.</p>
+      </AppShell>
+    );
+  }
 
   const trainers = users.filter((u: any) => u.roles.includes("trainer"));
 

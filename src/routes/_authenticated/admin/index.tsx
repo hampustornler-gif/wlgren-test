@@ -12,7 +12,21 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 
 function AdminHome() {
   const fetchMe = useServerFn(getMe);
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => fetchMe() });
+  const { data: me, isLoading } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => fetchMe(),
+    refetchOnMount: "always",
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
+  });
+
+  if (isLoading) {
+    return (
+      <AppShell title="Admin">
+        <p className="text-sm text-muted-foreground">Kontrollerar admin-behörighet…</p>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Admin">
